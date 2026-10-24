@@ -7,7 +7,7 @@ Updated incrementally as decisions are locked in.
 *Update after every locked decision so a fresh session can resume from this block alone.*
 - **Status:** ✅ **SPEC COMPLETE (Level 2, 2026-10-24).** Every item for tonight's build is decided, and the consistency sweep is resolved. No forward references are open.
 - **Last completed:** retcons for text descriptions, photo slideshow posts and the private Me page (§4.1.1, §5.4.1)
-- **Next up:** build. See "Next steps" at the bottom. The partner turns §5 into wireframes with Claude Cowork.
+- **Next up:** build. The M0 cards are in `.planning/M0-issues.json` (28 stories, reviewed), waiting for the user to push them to Project #16. Branches are tested on a laptop; phone checks happen after merge on prod.
 - **Moved to server (2026-10-24):** work continues on `miraii` at `~/projects/GovTok` (moved from `~/GovTok` 2026-10-24; symlink left behind), using `claude --remote-control` inside tmux. The original conversation was on the laptop; this doc plus memory is the only carried-over context.
 - **Context the doc doesn't hold:**
   - Cal Hacks submissions are due Sunday morning, 2 people.
@@ -165,6 +165,10 @@ Updated incrementally as decisions are locked in.
   - Fix fields, inline: `fixStorageId`, `fixedAt`, `fixedBy`, `fixedByKind` (`fixer | resident`; added by §4.3.2). One fix per report (§4.3.1).
 - `meToos`: `{reportId, residentId, createdAt}`, unique per (report, resident). No media.
 - `residents {token, createdAt}` (§3.1.1). `fixers {name, org, passcode, token}` (§3.1.2). The fixer `token` is issued when the passcode is checked.
+- **Build-plan additions (2026-10-24):**
+  - `fixAttempts {reportId, byKind, byId, clipStorageId, frameStorageIds[], lat, lng, status: checking|verified|not_fixed|retake|failed|superseded, reason, createdAt}`. A fix waits here while Claude checks it, and carries Claude's reason back for a retake (§4.3.1).
+  - `fixedByOrg` on reports, so the card can name the fixer's org (§3.1.2).
+  - `createdAt` is an explicit field (not `_creationTime`), so samples can be backdated (§6.1.1).
 - When the duplicate check finds a match while someone is posting (§4.1.2), they're steered to me-too and their clip is discarded.
 - The map count is `1 + meTooCount` (§5.2.1).
 - Rationale: matches Scope's "one tap" exactly. Two tables. The before/after reveal stays a simple pair: original, then fix (§5.1.1).
@@ -255,6 +259,7 @@ Updated incrementally as decisions are locked in.
 - If there are matches, it shows "Is it one of these?" with up to 3 nearest cards (thumbnail, title, days open), each with a **Me too** button, plus "No, it's new," which opens the camera.
 - If nothing is nearby, it goes straight to the camera (§4.1.1).
 - Me too creates a `meToos` row (§2.1.1). No clip is recorded.
+- Build-plan defaults (2026-10-24): Me too on your own post does nothing, and the button is hidden on your own posts and on fixed cards.
 - No automatic merge after screening: a later post at the same spot with the same category stays a separate report.
 - Rationale: location is known before recording, while category is known only after Claude runs. Checking up front means no clip gets recorded and thrown away, and it's a demo beat ("the app already knows about this pothole"). Phone GPS is usually 5–20 m accurate, so 50 m catches the same spot but not the next block.
 - Rejected:
@@ -279,6 +284,7 @@ Updated incrementally as decisions are locked in.
 - **Precedence** when several verdicts apply: `emergency` > `retake` > `reject` > `mute` > `pass`.
 - **Failure:** if Groq or Claude errors, retry once, then `held` with reason "screening failed."
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
+- **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
 - `held` → `open` only by hand, in the Convex dashboard. No moderation UI (§8).
 - No blurring: Claude can't give per-frame boxes for a whole video, and re-encoding is too heavy for tonight.
 - The mute is a playback flag only. The stored file keeps its audio. 📌 Deferred (§8): strip audio server-side for the pilot.
@@ -335,6 +341,7 @@ Updated incrementally as decisions are locked in.
 - Sort by `lastActivityAt`, descending. It's set at creation and bumped by each me-too and by the fix (§2.1.1). One Convex index.
 - Only `open` and `fixed` reports appear (§2.1.3). No personalization (Scope non-goal).
 - Rationale: a fresh fix jumps to the top, so reveals get seen (§5.1.1), and problems piling up me-toos rise.
+- Build-plan default (2026-10-24): the order is snapshotted when the feed mounts. Counts update live, but cards don't reorder under the user's finger; reopening the feed re-sorts it.
 
 ### 5.2 Map
 
@@ -376,6 +383,8 @@ Updated incrementally as decisions are locked in.
   3. Play a pre-filmed before/after pair of the same California spot. Claude verifies it, and the reveal plays (§5.1.1).
 - Needs before/after pairs filmed at the same spot, so Claude's same-spot check passes honestly.
 - **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), then sets `isSample: true`. Claude really did screen the seeds.
+- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "0 days". This is acceptable only because the Sample badge labels them.
+- **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
 - **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
 - Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
 - Rejected:
@@ -408,7 +417,7 @@ Updated incrementally as decisions are locked in.
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
-  - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron.
+  - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
   - Published reports (`open` / `fixed`) are kept indefinitely; the public record is the point.
 - Rejected:
   - Blurring locations to street level: breaks fixer navigation and the 50 m checks.

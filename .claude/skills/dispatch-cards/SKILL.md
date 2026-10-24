@@ -1,6 +1,6 @@
 ---
 name: dispatch-cards
-description: Pick up to 3 mutually independent GovTok user stories from Todo, move them (and their parent Features) to In Development, and launch one Remote Control–enabled Claude session per card — each in its own git worktree and tmux window — running `run-card`. Use when the user wants to start a parallel batch of cards.
+description: Pick every mutually independent GovTok user story from Todo (no fixed cap: everything that can run concurrently does), move them (and their parent Features) to In Development, and launch one Remote Control–enabled Claude session per card — each in its own git worktree and tmux window — running `run-card`. Use when the user wants to start a parallel batch of cards.
 metadata:
   author: david
   version: "0.1.0"
@@ -11,7 +11,7 @@ metadata:
 Fans out a batch of cards to parallel `run-card` sessions. Each runner is a **separate top-level Claude session** (not a subagent) so the user can attach to it directly in tmux or from the Claude app via Remote Control, and so it can ask/ping on its own — subagents can't use `AskUserQuestion` or `PushNotification`.
 
 Constants (IDs come from `.planning/project-fields.json`, never hardcoded here):
-- `CAP = 3` — max user stories in flight, because the user manually e2e-tests each one.
+- No cap on stories in flight. Every Todo story that's independent of the others and of what's already in flight gets dispatched (the user's call, 2026-10-24).
 - tmux session `gt-cards`, one window per card named by card ID.
 - Worktrees at `../GovTok-worktrees/<CardID>` (outside the repo, so root `eslint .` / `git status` never see them).
 
@@ -21,11 +21,11 @@ Constants (IDs come from `.planning/project-fields.json`, never hardcoded here):
 - `git fetch origin main`, then `git cat-file -e origin/main:.claude/skills/run-card/SKILL.md`. Worktrees check out the branch's own `.claude/skills/`, so `run-card` (and this skill's edits to it) must be merged to main before a runner can use it.
 - The Status options in `project-fields.json` include `Todo` and `In Development`.
 
-## 2. Count free slots
+## 2. List what's in flight
 
 `gh project item-list 16 --owner StreetLamp05 --format json --limit 500` (keep the output — item IDs are needed in step 6).
 
-User stories are items whose title matches `^US\d+:` — match on the title, not the `user-story` label, since some cards are missing labels. Count stories in **In Development or Testing** (both occupy the user's testing bandwidth). `slots = CAP - count`. If `slots <= 0`, list what's in flight and stop.
+User stories are items whose title matches `^US\d+:` — match on the title, not the `user-story` label, since some cards are missing labels. Collect the stories in **In Development or Testing**. They don't limit how many cards start, but new picks must not conflict with them (step 4).
 
 ## 3. Build the candidate list
 
@@ -44,7 +44,7 @@ Launch one `Plan` agent (read-only; keeps the footprint research out of this con
 - both change the same Convex functions (`convex/_generated` conflicts),
 - have one building on behavior the other introduces, even with no dependency link.
 
-Candidates that conflict with an in-flight story are out. From the rest, greedily take candidates in step-3 order, skipping any that conflict with one already picked, until `slots` are filled. Fewer than `slots` is fine — never pad with a conflicting card.
+Candidates that conflict with an in-flight story are out. From the rest, greedily take candidates in step-3 order, skipping any that conflict with one already picked. Take every candidate that fits; never pick a conflicting card.
 
 ## 5. Confirm with the user
 

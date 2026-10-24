@@ -1,4 +1,454 @@
 {
   "_comment": "Idempotency manifest for generated GitHub issues. Keyed by Spec § reference. Check before creating an issue for a section: skip if it's already here, don't duplicate.",
-  "generated": {}
+  "generated": {
+    "F1": {
+      "specSection": "§1.1.1, §2.1.1",
+      "issueNumber": 1,
+      "issueId": 6018542954,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/1",
+      "title": "F1: Foundation",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL4M",
+      "fieldsSet": true
+    },
+    "US1": {
+      "specSection": "§1.1.1",
+      "issueNumber": 2,
+      "issueId": 6018543221,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/2",
+      "title": "US1: Scaffold Next.js + Convex app with a test harness",
+      "parentLinked": true,
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL4w",
+      "fieldsSet": true
+    },
+    "US2": {
+      "specSection": "§1.1.1, §1.1.2, §1.1.3, §1.1.4",
+      "issueNumber": 3,
+      "issueId": 6018543610,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/3",
+      "title": "US2: Provision accounts and API keys",
+      "parentLinked": true,
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL48",
+      "fieldsSet": true
+    },
+    "US3": {
+      "specSection": "§6.1.1, §4.2.1, §4.3.1",
+      "issueNumber": 4,
+      "issueId": 6018544016,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/4",
+      "title": "US3: Film the sample clips and collect eval fixtures",
+      "parentLinked": true,
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL5E",
+      "fieldsSet": true
+    },
+    "US4": {
+      "specSection": "§1.1.1",
+      "issueNumber": 5,
+      "issueId": 6018544351,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/5",
+      "title": "US4: Deploy to Vercel with Convex production",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US1",
+        "US2"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL5s",
+      "fieldsSet": true
+    },
+    "US5": {
+      "specSection": "§2.1.1, §2.1.2, §2.1.3, §3.1.1, §3.1.2, §7.1.1",
+      "issueNumber": 6,
+      "issueId": 6018544675,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/6",
+      "title": "US5: Define the full Convex schema and shared domain modules",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US1"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL6I",
+      "fieldsSet": true
+    },
+    "US6": {
+      "specSection": "§3.1.1, §5.1.1, §6.1.1",
+      "issueNumber": 7,
+      "issueId": 6018545016,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/7",
+      "title": "US6: Build the app shell with device token, location and sound plumbing",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US1"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSL6Y",
+      "fieldsSet": true
+    },
+    "F2": {
+      "specSection": "§4.1.1, §4.1.2",
+      "issueNumber": 8,
+      "issueId": 6018545354,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/8",
+      "title": "F2: Post a problem",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMHs",
+      "fieldsSet": true
+    },
+    "US7": {
+      "specSection": "§4.1.1",
+      "issueNumber": 9,
+      "issueId": 6018545564,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/9",
+      "title": "US7: Record a vertical video clip in the browser",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US6"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMIk",
+      "fieldsSet": true
+    },
+    "US8": {
+      "specSection": "§4.1.1, §2.1.3, §3.1.1",
+      "issueNumber": 10,
+      "issueId": 6018545963,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/10",
+      "title": "US8: Submit a post and watch it check",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5",
+        "US6",
+        "US7"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMIw",
+      "fieldsSet": true
+    },
+    "US9": {
+      "specSection": "§4.1.1",
+      "issueNumber": 11,
+      "issueId": 6018546254,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/11",
+      "title": "US9: Pick photos for a slideshow post",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US8"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMI4",
+      "fieldsSet": true
+    },
+    "US10": {
+      "specSection": "§4.1.2, §2.1.1",
+      "issueNumber": 12,
+      "issueId": 6018546672,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/12",
+      "title": "US10: Offer Me too on nearby reports before posting",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US8"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMJA",
+      "fieldsSet": true
+    },
+    "F3": {
+      "specSection": "§1.1.3, §1.1.4, §2.1.2, §4.2.1",
+      "issueNumber": 13,
+      "issueId": 6018547050,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/13",
+      "title": "F3: Screening pipeline",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMQw",
+      "fieldsSet": true
+    },
+    "US11": {
+      "specSection": "§1.1.4",
+      "issueNumber": 14,
+      "issueId": 6018547336,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/14",
+      "title": "US11: Transcribe a video's audio with Groq Whisper",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US3",
+        "US5"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMRk",
+      "fieldsSet": true
+    },
+    "US12": {
+      "specSection": "§1.1.3, §2.1.2, §4.2.1",
+      "issueNumber": 15,
+      "issueId": 6018547766,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/15",
+      "title": "US12: Screen and categorize a post with Claude",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US3",
+        "US5"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMR4",
+      "fieldsSet": true
+    },
+    "US13": {
+      "specSection": "§4.2.1, §2.1.3, §1.1.2, §1.1.3",
+      "issueNumber": 16,
+      "issueId": 6018548183,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/16",
+      "title": "US13: Run the screening pipeline and apply the verdict",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US11",
+        "US12"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMSI",
+      "fieldsSet": true
+    },
+    "US14": {
+      "specSection": "§4.2.1, §2.1.3",
+      "issueNumber": 17,
+      "issueId": 6018548558,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/17",
+      "title": "US14: Show the poster their result: posted, retake, reject or call 911",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US8",
+        "US13"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMSQ",
+      "fieldsSet": true
+    },
+    "US15": {
+      "specSection": "§7.1.1",
+      "issueNumber": 18,
+      "issueId": 6018548844,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/18",
+      "title": "US15: Purge held reports after 7 days",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMSc",
+      "fieldsSet": true
+    },
+    "F4": {
+      "specSection": "§5.1.1, §5.1.2",
+      "issueNumber": 19,
+      "issueId": 6018549136,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/19",
+      "title": "F4: Feed",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMcg",
+      "fieldsSet": true
+    },
+    "US16": {
+      "specSection": "§5.1.1, §5.1.2, §7.1.1, §4.2.1",
+      "issueNumber": 20,
+      "issueId": 6018549470,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/20",
+      "title": "US16: Scroll a full-screen feed of public reports",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5",
+        "US6"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMdk",
+      "fieldsSet": true
+    },
+    "US17": {
+      "specSection": "§5.1.1, §2.1.2, §6.1.1, §5.2.1",
+      "issueNumber": 21,
+      "issueId": 6018552613,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/21",
+      "title": "US17: Show who's responsible, days open, captions and the map pin on each card",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US16"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMd4",
+      "fieldsSet": true
+    },
+    "US18": {
+      "specSection": "§2.1.1, §5.1.1",
+      "issueNumber": 22,
+      "issueId": 6018553019,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/22",
+      "title": "US18: Tap Me too from a feed card",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US10",
+        "US16"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMeU",
+      "fieldsSet": true
+    },
+    "US19": {
+      "specSection": "§5.1.1, §4.3.2, §6.2.1",
+      "issueNumber": 23,
+      "issueId": 6018553361,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/23",
+      "title": "US19: Play the before/after reveal on fixed cards",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US16"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMec",
+      "fieldsSet": true
+    },
+    "F5": {
+      "specSection": "§1.1.2, §5.2.1",
+      "issueNumber": 24,
+      "issueId": 6018553633,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/24",
+      "title": "F5: Map",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMmU",
+      "fieldsSet": true
+    },
+    "US20": {
+      "specSection": "§1.1.2, §5.2.1",
+      "issueNumber": 25,
+      "issueId": 6018553885,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/25",
+      "title": "US20: See clustered reports on a map",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US2",
+        "US5",
+        "US6"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMnM",
+      "fieldsSet": true
+    },
+    "F6": {
+      "specSection": "§3.1.2, §4.3.1, §4.3.2, §5.3.1",
+      "issueNumber": 26,
+      "issueId": 6018554347,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/26",
+      "title": "F6: Fix flow",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMqA",
+      "fieldsSet": true
+    },
+    "US21": {
+      "specSection": "§3.1.2, §5.3.1",
+      "issueNumber": 27,
+      "issueId": 6018554624,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/27",
+      "title": "US21: Log in as a fixer and see the nearest open reports",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5",
+        "US6"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMq0",
+      "fieldsSet": true
+    },
+    "US22": {
+      "specSection": "§4.3.1",
+      "issueNumber": 28,
+      "issueId": 6018555105,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/28",
+      "title": "US22: Check a fix clip against the original with Claude",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US3",
+        "US12"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMrE",
+      "fieldsSet": true
+    },
+    "US23": {
+      "specSection": "§4.3.1, §4.3.2, §5.3.1",
+      "issueNumber": 29,
+      "issueId": 6018555506,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/29",
+      "title": "US23: Record and submit a proof-of-fix clip, as a fixer or a neighbor",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US7",
+        "US16",
+        "US21",
+        "US22"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMrM",
+      "fieldsSet": true
+    },
+    "F7": {
+      "specSection": "§5.4.1",
+      "issueNumber": 30,
+      "issueId": 6018555934,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/30",
+      "title": "F7: Me page",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMyc",
+      "fieldsSet": true
+    },
+    "US24": {
+      "specSection": "§5.4.1, §7.1.1",
+      "issueNumber": 31,
+      "issueId": 6018556226,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/31",
+      "title": "US24: See my posts and me-toos on a private Me page",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US10",
+        "US14",
+        "US19"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSMzM",
+      "fieldsSet": true
+    },
+    "F8": {
+      "specSection": "§6.1.1, §6.2.1",
+      "issueNumber": 32,
+      "issueId": 6018556587,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/32",
+      "title": "F8: Demo & impact",
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM2U",
+      "fieldsSet": true
+    },
+    "US25": {
+      "specSection": "§6.1.1",
+      "issueNumber": 33,
+      "issueId": 6018556786,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/33",
+      "title": "US25: Seed sample reports through the real pipeline",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US3",
+        "US7",
+        "US13",
+        "US21",
+        "US22"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM3A",
+      "fieldsSet": true
+    },
+    "US26": {
+      "specSection": "§6.2.1",
+      "issueNumber": 34,
+      "issueId": 6018557149,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/34",
+      "title": "US26: Compute the impact stats for the pitch",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM3I",
+      "fieldsSet": true
+    },
+    "US27": {
+      "specSection": "Scope, §6.2.1, §7.1.1",
+      "issueNumber": 35,
+      "issueId": 6018557498,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/35",
+      "title": "US27: Write the README and submission notes",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US25"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM3Y",
+      "fieldsSet": true
+    },
+    "US28": {
+      "specSection": "§2.1.2",
+      "issueNumber": 36,
+      "issueId": 6018557832,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/36",
+      "title": "US28: Verify the routing table with the Mableton teammate",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US5"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM3k",
+      "fieldsSet": true
+    }
+  }
 }
