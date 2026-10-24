@@ -2,7 +2,6 @@
 
 Source of truth for design decisions made during the pre-build design pass.
 Updated incrementally as decisions are locked in.
-
 ## Session state / handoff
 *Update after every locked decision so a fresh session can resume from this block alone.*
 - **Status:** ✅ **SPEC COMPLETE (Level 2, 2026-10-24).** Every item for tonight's build is decided, and the consistency sweep is resolved. No forward references are open.
