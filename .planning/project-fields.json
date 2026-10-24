@@ -1,0 +1,57 @@
+{
+  "_comment": "Cached GitHub Projects v2 field/option IDs for GovTok. Regenerate with: gh project field-list 16 --owner StreetLamp05 --format json. Do not hand-edit IDs.",
+  "project": {
+    "number": 16,
+    "owner": "StreetLamp05",
+    "id": "PVT_kwHOBPSNSc4BolbV",
+    "url": "https://github.com/users/StreetLamp05/projects/16"
+  },
+  "fields": {
+    "Status": {
+      "id": "PVTSSF_lAHOBPSNSc4BolbVzhnE2JA",
+      "options": {
+        "Backlog": "767787a0",
+        "Refinement": "a2942f44",
+        "Todo": "f75ad846",
+        "In Development": "47fc9ee4",
+        "Testing": "b1819835",
+        "Deployed": "98236657",
+        "Soft Archive": "1d46e8a9"
+      }
+    },
+    "Area": {
+      "id": "PVTSSF_lAHOBPSNSc4BolbVzhnE2N4",
+      "options": {
+        "web": "301ff1ed",
+        "convex": "92d8fe50",
+        "ai": "698d9455",
+        "infra": "e5225e19",
+        "docs": "f6b3186a"
+      }
+    },
+    "Size": {
+      "id": "PVTSSF_lAHOBPSNSc4BolbVzhnE2J4",
+      "options": {
+        "S": "92c716b2",
+        "M": "e8793834",
+        "L": "0acbba66"
+      }
+    },
+    "Spec §": {
+      "id": "PVTF_lAHOBPSNSc4BolbVzhnE2J8",
+      "type": "text"
+    },
+    "Start date": {
+      "id": "PVTF_lAHOBPSNSc4BolbVzhnE2KA",
+      "type": "date"
+    },
+    "Target date": {
+      "id": "PVTF_lAHOBPSNSc4BolbVzhnE2KE",
+      "type": "date"
+    },
+    "Milestone": {
+      "id": "PVTF_lAHOBPSNSc4BolbVzhnE2JM",
+      "type": "native"
+    }
+  }
+}

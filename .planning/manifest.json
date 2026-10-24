@@ -1,0 +1,4 @@
+{
+  "_comment": "Idempotency manifest for generated GitHub issues. Keyed by Spec § reference. Check before creating an issue for a section: skip if it's already here, don't duplicate.",
+  "generated": {}
+}
