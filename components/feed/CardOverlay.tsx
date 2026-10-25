@@ -125,9 +125,9 @@ export function fixedLine(report: Pick<PublicReport, "fixedByKind" | "fixedByLab
 }
 
 // The caption for where `video` is in this report's clip. Null while the card isn't on screen,
-// for muted reports (§4.2.1), and while the element plays something else (US19's fix clip).
-// The src check only catches a fix clip swapped into the pooled element. If US19 plays the fix
-// clip in its own <video> instead, it needs to tell this overlay to hide captions.
+// for muted reports (§4.2.1), while the element plays something else, and once the clip has
+// ended: on a fixed card the original ends and stays ended through US19's stamp and fix clip.
+// Other cards never end, because the pool sets `loop` whenever it points an element at a card.
 function useCaption(report: PublicReport, video: HTMLVideoElement | null): string | null {
   const segments = report.audioMuted ? undefined : report.segments;
   const subscribe = useCallback(
@@ -139,14 +139,14 @@ function useCaption(report: PublicReport, video: HTMLVideoElement | null): strin
     [video],
   );
   const caption = () =>
-    video && report.clipUrl && video.getAttribute("src") === report.clipUrl
+    video && report.clipUrl && video.getAttribute("src") === report.clipUrl && !video.ended
       ? captionAt(segments, video.currentTime)
       : null;
   return useSyncExternalStore(subscribe, caption, () => null);
 }
 
 // timeupdate fires about 4 times a second while playing, often enough for captions.
-const VIDEO_EVENTS = ["timeupdate", "seeked", "emptied", "loadstart"] as const;
+const VIDEO_EVENTS = ["timeupdate", "seeked", "emptied", "loadstart", "ended"] as const;
 
 function PinIcon({ size }: { size: number }) {
   return (

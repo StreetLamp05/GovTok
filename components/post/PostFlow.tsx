@@ -3,6 +3,7 @@
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useEffect, useState } from "react";
+import PhotoPicker from "@/components/capture/PhotoPicker";
 import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -14,18 +15,21 @@ import { getResidentToken } from "@/lib/hooks/useResidentToken";
 import { uploadFile } from "@/lib/upload";
 import CheckingScreen from "./CheckingScreen";
 
-// Posting (§4.1.1): location → capture → preview + optional description → Submit → Checking….
+// Posting (§4.1.1): location → capture (video or photos) → preview + optional description → Submit → Checking….
 // Each file is uploaded to Convex storage, then createReport saves the report as pending.
 
-// What's being posted, with object URLs for the preview and the location it was filmed at.
-// US9 adds a `{ kind: "photos" }` draft; createReport already takes both.
-type Draft = { kind: "video"; clip: RecordedClip; clipUrl: string; posterUrl?: string; point: LatLng | null };
+// What's being posted, with object URLs for the preview and the location it was captured at.
+type Draft =
+  | { kind: "video"; clip: RecordedClip; clipUrl: string; posterUrl?: string; point: LatLng | null }
+  | { kind: "photos"; photos: Blob[]; photoUrls: string[]; point: LatLng | null };
+type Mode = Draft["kind"];
 
 const SUBMIT_ERROR = "We couldn't send your post. Check your connection and try again.";
 
 export default function PostFlow() {
   const location = useCurrentLocation();
   const createReport = useMutation(api.posts.createReport);
+  const [mode, setMode] = useState<Mode>("video");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -36,12 +40,13 @@ export default function PostFlow() {
   useEffect(() => {
     if (!draft) return;
     return () => {
+      if (draft.kind === "photos") return draft.photoUrls.forEach((url) => URL.revokeObjectURL(url));
       URL.revokeObjectURL(draft.clipUrl);
       if (draft.posterUrl) URL.revokeObjectURL(draft.posterUrl);
     };
   }, [draft]);
 
-  // Back to the recorder, keeping the description.
+  // Back to the recorder or photo picker, keeping the description.
   function recordAgain() {
     setDraft(null);
     setError(null);
@@ -59,10 +64,20 @@ export default function PostFlow() {
       clip,
       clipUrl: URL.createObjectURL(clip.blob),
       posterUrl: clip.frames[0] ? URL.createObjectURL(clip.frames[0]) : undefined,
-      // The recorder only shows once there's a fix, so this is set in practice.
+      // Capture only shows once there's a fix, so this is set in practice.
       point: location.status === "ready" ? location.point : null,
     });
     // A more accurate fix while they type. If it fails, the fix from filming is used.
+    location.refresh();
+  }
+
+  function picked(photos: Blob[]) {
+    setDraft({
+      kind: "photos",
+      photos,
+      photoUrls: photos.map((photo) => URL.createObjectURL(photo)),
+      point: location.status === "ready" ? location.point : null,
+    });
     location.refresh();
   }
 
@@ -71,7 +86,7 @@ export default function PostFlow() {
   async function submit() {
     if (!draft || submitting || !point) return;
     // Checked before uploading, so an oversized camera-app file fails fast instead of after a long upload.
-    if (draft.clip.blob.size > MAX_CLIP_BYTES) {
+    if (draft.kind === "video" && draft.clip.blob.size > MAX_CLIP_BYTES) {
       setError(CLIP_TOO_BIG);
       return;
     }
@@ -79,19 +94,19 @@ export default function PostFlow() {
     setError(null);
     try {
       const { lat, lng } = point;
-      const [clipStorageId, frameStorageIds] = await Promise.all([
-        uploadFile(draft.clip.blob),
-        Promise.all(draft.clip.frames.map((frame) => uploadFile(frame))),
-      ]);
-      const id = await createReport({
-        token: getResidentToken(),
-        mediaType: "video",
-        clipStorageId,
-        frameStorageIds,
-        description: description.trim() || undefined,
-        lat,
-        lng,
-      });
+      const report = { token: getResidentToken(), description: description.trim() || undefined, lat, lng };
+      let id: Id<"reports">;
+      if (draft.kind === "photos") {
+        // A slideshow's photos go where a video's frames would (§2.1.1), and there's no clip.
+        const frameStorageIds = await Promise.all(draft.photos.map((photo) => uploadFile(photo)));
+        id = await createReport({ ...report, mediaType: "photos", frameStorageIds });
+      } else {
+        const [clipStorageId, frameStorageIds] = await Promise.all([
+          uploadFile(draft.clip.blob),
+          Promise.all(draft.clip.frames.map((frame) => uploadFile(frame))),
+        ]);
+        id = await createReport({ ...report, mediaType: "video", clipStorageId, frameStorageIds });
+      }
       setReportId(id);
     } catch (err) {
       setError(err instanceof ConvexError && typeof err.data === "string" ? err.data : SUBMIT_ERROR);
@@ -105,12 +120,26 @@ export default function PostFlow() {
   if (!draft) {
     if (location.status !== "ready") return <LocationGate location={location} />;
     // US10: the duplicate check ("Is it one of these?", §4.1.2) goes here, before the camera opens.
-    // US9: the Video / Photos choice goes here; photos skip the recorder.
     return (
       <main className="flex flex-col gap-4 p-6">
         <h1 className="text-2xl font-extrabold">Post a problem</h1>
-        <p className="text-[#4A5A6E]">Film the problem for up to 20 seconds. Say what&apos;s wrong if you like.</p>
-        <VideoRecorder audio autoOpen onDone={captured} />
+        <ModeChoice mode={mode} onChange={setMode} />
+        {mode === "video" && (
+          <>
+            <p className="text-[#4A5A6E]">Film the problem for up to 20 seconds. Say what&apos;s wrong if you like.</p>
+            {/* Switching to Photos unmounts the recorder, which turns the camera off. */}
+            <VideoRecorder audio autoOpen onDone={captured} />
+          </>
+        )}
+        {/* Only hidden while Video shows, so switching back keeps the photos already picked. */}
+        <div className={mode === "photos" ? "flex flex-col gap-4" : "hidden"}>
+          {/* Re-encoding strips each photo's GPS, so the pin is the phone's location now (§4.1.1). */}
+          <p className="text-[#4A5A6E]">
+            Take or choose up to 10 photos of the problem. Your post is pinned to where you are now, so post from where
+            the problem is.
+          </p>
+          <PhotoPicker onDone={picked} />
+        </div>
       </main>
     );
   }
@@ -118,13 +147,29 @@ export default function PostFlow() {
   return (
     <main className="flex flex-col gap-4 p-6">
       <h1 className="text-2xl font-extrabold">Check your post</h1>
-      <video
-        src={draft.clipUrl}
-        poster={draft.posterUrl}
-        controls
-        playsInline
-        className="mx-auto aspect-[9/16] w-full max-w-sm rounded-lg bg-black object-contain"
-      />
+      {draft.kind === "video" ? (
+        <video
+          src={draft.clipUrl}
+          poster={draft.posterUrl}
+          controls
+          playsInline
+          className="mx-auto aspect-[9/16] w-full max-w-sm rounded-lg bg-black object-contain"
+        />
+      ) : (
+        // Swipes sideways through the photos, the way the feed shows a slideshow (§5.1.1).
+        <div className="mx-auto flex aspect-[9/16] w-full max-w-sm snap-x snap-mandatory overflow-x-auto rounded-lg bg-black">
+          {draft.photoUrls.map((url, i) => (
+            // Local object URLs, so not next/image.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={url}
+              src={url}
+              alt={`Photo ${i + 1} of ${draft.photoUrls.length}`}
+              className="h-full w-full shrink-0 snap-center object-contain"
+            />
+          ))}
+        </div>
+      )}
       <label className="flex flex-col gap-1">
         <span className="font-semibold">
           Description <span className="font-normal text-[#4A5A6E]">(optional)</span>
@@ -154,7 +199,7 @@ export default function PostFlow() {
           disabled={submitting}
           className="flex-1 rounded-lg border px-4 py-3 font-semibold disabled:opacity-40"
         >
-          Record again
+          {draft.kind === "video" ? "Record again" : "Pick again"}
         </button>
         <button
           onClick={submit}
@@ -165,6 +210,28 @@ export default function PostFlow() {
         </button>
       </div>
     </main>
+  );
+}
+
+// Video or a photo slideshow (§4.1.1). Video first, since it's the default.
+function ModeChoice({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
+  const options: { value: Mode; label: string }[] = [
+    { value: "video", label: "Video" },
+    { value: "photos", label: "Photos" },
+  ];
+  return (
+    <div role="group" aria-label="Post a video or photos" className="flex rounded-lg border border-[#C9D3DE] p-1">
+      {options.map(({ value, label }) => (
+        <button
+          key={value}
+          aria-pressed={mode === value}
+          onClick={() => onChange(value)}
+          className={`flex-1 rounded-md px-4 py-2 font-semibold ${mode === value ? "bg-[#157A47] text-white" : "text-[#4A5A6E]"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

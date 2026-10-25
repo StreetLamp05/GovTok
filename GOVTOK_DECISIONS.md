@@ -126,6 +126,7 @@ Updated incrementally as decisions are locked in.
 - The Messages API takes no video and no audio input (it accepts only text, images and PDFs). That's why both frames and a transcript are needed.
 - Audio is **kept** in the published clip. This is the user's call (2026-10-24): the hackathon pitch comes first, and narration ("this has been here since June") makes stronger cards. Making it fit Mableton can happen after Cal Hacks.
 - Cost: about 8k input tokens per post, roughly $0.035 on Opus 5.5 ($4 / $20 per 1M tokens). 1,000 posts cost about $35.
+  - (2026-10-25) A 10-photo slideshow comes to about 16k input tokens (~$0.065), and a fix check against a 10-photo original about 26k (~$0.10). Fine at demo scale.
 - Rationale: Opus has the best vision, and missing a face or plate is the expensive failure. A cheaper model saves only cents at this scale. Screening is async (the post is "pending" until it clears), so latency doesn't matter much.
 - Rejected:
   - Sonnet 5.5 (~$0.018 per post): close in quality, but the savings are negligible.
@@ -250,6 +251,8 @@ Updated incrementally as decisions are locked in.
 - **Frames from a file** (sweep, 2026-10-24): for any clip not recorded live, load the blob into a hidden `<video>`, seek to 6 evenly spaced times, and grab each frame with a canvas. Used by the native-camera fallback and by demo-mode uploads (§6.1.1).
 - ~~**Video only**, for both posts and fixes.~~
 - **Retcon (2026-10-24):** a post is a **video or a photo slideshow** of 1–10 photos, picked from the camera or gallery (`<input type="file" accept="image/*" multiple>`) and resized in the browser to 1280px or less on the long edge. **Fixes stay video only** (§4.3.1). Reason: the user wants TikTok photo mode as an option.
+  - (2026-10-25) Photos are pinned to where the phone is when posting, not where they were taken: re-encoding strips their EXIF GPS (and iOS Safari often removes it from library picks anyway). Photos mode says "Your post is pinned to where you are now, so post from where the problem is."
+  - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
 - **Optional description** (2026-10-24): a text field of up to 280 characters on every post, video or slideshow. It goes into the Claude call (§1.1.3) and is screened (§4.2.1).
 - Storage: about 1 GB free in Convex works out to roughly 250 clips (§8 covers pilot-scale hosting).
 - Rationale: controls size, length and format, which keeps clips under the Groq file limit (§1.1.4) and the Convex 2-min upload timeout (§1.1.1), and makes them play on iOS and Android.
@@ -327,6 +330,9 @@ Updated incrementally as decisions are locked in.
 - Fixers are **not** limited to their own org's reports. A city crew can close a Cobb report it sees fixed. This settles §3.1.2's forward reference.
 - Card label: "Fix confirmed by a neighbor · Cobb DOT" when closed by a resident, "Fixed by Mableton Sanitation" when closed by a fixer.
 - Data: `fixedBy` holds either a fixer ID or a resident ID, plus `fixedByKind: fixer | resident` (an addition to §2.1.1).
+- Known weaknesses, accepted for the hackathon (2026-10-25, US23):
+  - The 50 m check, in the client and again in `submitFix`, trusts the coordinates the phone sends. Report locations are public (§7.1.1), so anyone can claim to be at one. Demo mode relies on exactly this (§6.1.1). What actually gates a fix is Claude's same-spot, problem-resolved check (§4.3.1), not the geofence.
+  - There's no limit on fix attempts, and each one is a Claude call.
 - Rationale: most reports (roads, stormwater, water, streetlights) aren't the city's. Without this, the most relatable reveal (a pothole) could never happen. It reuses the §4.3.1 code with one extra entry point, and it shows the community holding the county to account. The weak resident identity (§3.1.1) is acceptable because the geofence and Claude's check gate the result, not the identity.
 - Rejected:
   - Never closing reports the city doesn't own: a pointed story, but potholes could never show a fix.
@@ -349,6 +355,7 @@ Updated incrementally as decisions are locked in.
 - Slideshow posts swipe sideways through their photos. The description shows under the title (hidden when `audioMuted`).
 - Sound: phone browsers only autoplay video muted, so the first tap anywhere turns sound on for the session.
 - **Reveal (fixed cards):** play the original, then a ~0.7s stamp ("FIXED · N days · <who fixed it>"), then the fix clip, and loop the pair.
+  - Build details (2026-10-25, US19): under one day the stamp reads "FIXED · same day", matching the status chip (§6.1.1). A photo post shows its slideshow for 4 s before the stamp. An original clip that fails to load holds on its poster for 4 s, then the stamp and fix still play. A fixed report with no playable fix clip loops original → stamp → original. The fix clip is always muted. 📌 Follow-up (M1): the mockup's "Before / After · proof of fix" chip.
 - Rejected:
   - Split screen: halves too narrow on a 9:16 phone.
   - Swipe sideways between before and after: a hidden gesture judges would miss.
@@ -374,6 +381,7 @@ Updated incrementally as decisions are locked in.
 - `/fix` asks for the passcode once (§3.1.2). Then it lists `open` reports nearest first: thumbnail, title, owner chip, days open, me-too count. All owners are listed (§4.3.2).
 - Tap a report to watch the original, then **Record fix**, which enables only within 50 m. Then "Checking…", then `verified` or a retake with Claude's reason (§4.3.1).
 - Neighbors confirming fixes reuse the same capture and check screens, reached from "Is it fixed?" on a card (§4.3.2).
+  - Route (2026-10-25, US23): "Is it fixed?" opens `/confirm/<reportId>`, which shows the report's thumbnail, title and owner chip above the same capture screen. It has no tab bar, like `/fix`.
 
 ### 5.4 Me page
 
@@ -419,6 +427,7 @@ Updated incrementally as decisions are locked in.
 - **Supporting, from stored data:**
   - **Days to a verified fix:** median, and the share fixed within 30 days, by owner (city / Cobb / utility), from `createdAt` and `fixedAt`. Shows which agency is slow.
   - **Views per fix reveal:** a `revealViews` counter on the report, incremented once per card view per session when the "FIXED" stamp first plays (§5.1.1), not on each loop. Shows whether fixes are actually seen, which is the premise.
+    - *(Clarified 2026-10-25, US19:)* once per report per browser session (sessionStorage), counted from the feed only. Me-page reveals (§5.4.1) count only if US24 opts in.
   - **Me-toos as a share of (reports + me-toos):** a proxy for duplicate calls avoided. *(Denominator clarified 2026-10-25, US26.)*
 - **For Cal Hacks:** there's no real data yet, so the pitch shows the plan plus the live counters from the demo. One stats query; no dashboard screen.
 - Rationale: the premise is that visible fixes build trust (Scope), so the headline measures trust, and the counters show the mechanism (fixes happen, and people see them). It answers the Anthropic track's impact plan and Microsoft's "measurable usefulness."
@@ -431,7 +440,7 @@ Updated incrementally as decisions are locked in.
 ### 7.1 Privacy
 
 **7.1.1 What's public — exact location, no poster identity; held clips purged after 7 days**
-- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1).
+- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow is pinned to where the phone was when posting, which may not be where the photos were taken (§4.1.1).
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
@@ -454,6 +463,7 @@ Updated incrementally as decisions are locked in.
 - Spanish UI and posts
 - Video hosting at pilot scale (free-tier bandwidth)
 - Database read bandwidth of the live map query (2026-10-25, accepted for M0): `mapReports` (§5.2.1) reads every public report in full (~1.5–2 KB each, mostly transcript and segments) and re-runs on every write to an open or fixed report while anyone has the map open: posts clearing screening, me-toos, fixes, and reveal-view counts (§6.2.1, one write per viewer per session per fixed card, so ~50 people scrolling past 5 fixed cards add ~250 re-runs). The feed query has the same shape but wasn't measured here. Convex caches it across viewers. At 100 reports that is ~200 KB per re-run, or ~5,000 re-runs in the 1 GiB/month free tier. Revisit when the Convex dashboard shows database bandwidth above ~50% of the free tier, or above ~500 public reports. Options then: move transcript/segments/description into their own table, or keep a slim map-pin table
+- Reveal-view counter abuse (2026-10-25, accepted for M0): `recordRevealView` (§6.2.1) takes no token, so a script looping over public report IDs can inflate `revealViews`. Each call is also a write that re-runs the feed and map queries for every viewer (see the bandwidth item above). A resident token wouldn't stop it, since tokens are made on the client (§3.1.1). Options then: a per-resident server-side dedup table, or a rate limit.
 - Staff moderation queue for flagged posts (until then, `held` is released by hand in the Convex dashboard, §4.2.1)
 - Strip audio server-side from `mute`-verdict clips (§4.2.1)
 - Onboarding real fixers (city staff, contractors) with the city
@@ -463,6 +473,7 @@ Updated incrementally as decisions are locked in.
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
 - A limit on fixer passcode guesses (§3.1.2)
+- A limit on proof-of-fix attempts per person and report, since each is a Claude call, plus a geofence that doesn't trust client-sent coordinates (§4.3.2)
 - Real resident identity for the pilot (Google sign-in or phone) so me-too counts can be trusted (§3.1.1)
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
