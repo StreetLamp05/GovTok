@@ -8,21 +8,24 @@
  * @module
  */
 
-import type * as feed from "../feed.js";
 import type * as crons from "../crons.js";
+import type * as feed from "../feed.js";
 import type * as files from "../files.js";
 import type * as fixVerification from "../fixVerification.js";
 import type * as fixVerificationDb from "../fixVerificationDb.js";
 import type * as fixers from "../fixers.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_claude from "../lib/claude.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_publicReport from "../lib/publicReport.js";
 import type * as lib_routing from "../lib/routing.js";
+import type * as lib_screenPrompt from "../lib/screenPrompt.js";
 import type * as lib_screening from "../lib/screening.js";
 import type * as placeholder from "../placeholder.js";
 import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
+import type * as stats from "../stats.js";
 
 import type {
   ApiFromModules,
@@ -31,21 +34,24 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  feed: typeof feed;
   crons: typeof crons;
+  feed: typeof feed;
   files: typeof files;
   fixVerification: typeof fixVerification;
   fixVerificationDb: typeof fixVerificationDb;
   fixers: typeof fixers;
   "lib/auth": typeof lib_auth;
+  "lib/claude": typeof lib_claude;
   "lib/geo": typeof lib_geo;
   "lib/publicReport": typeof lib_publicReport;
   "lib/routing": typeof lib_routing;
+  "lib/screenPrompt": typeof lib_screenPrompt;
   "lib/screening": typeof lib_screening;
   placeholder: typeof placeholder;
   purge: typeof purge;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
+  stats: typeof stats;
 }>;
 
 /**
