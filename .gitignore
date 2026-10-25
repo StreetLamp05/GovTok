@@ -29,6 +29,8 @@ next-env.d.ts
 build/
 dist/
 coverage/
+# Vitest browser-mode failure screenshots
+.vitest/
 *.tsbuildinfo
 
 # Vercel
