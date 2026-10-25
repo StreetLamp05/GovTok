@@ -4,7 +4,7 @@ Source of truth for design decisions made during the pre-build design pass.
 Updated incrementally as decisions are locked in.
 ## Session state / handoff
 *Update after every locked decision so a fresh session can resume from this block alone.*
-- **Status:** ✅ **SPEC COMPLETE (Level 2, 2026-10-24).** Every item for tonight's build is decided, and the consistency sweep is resolved. No forward references are open.
+- **Status:** ✅ **SPEC COMPLETE (Level 2, 2026-10-24).** Every item for tonight's build is decided, and the consistency sweep is resolved. No forward references are open. One known gap (2026-10-25): slurs aren't yet in US12's title rule (§4.2.1).
 - **Last completed:** retcons for text descriptions, photo slideshow posts and the private Me page (§4.1.1, §5.4.1)
 - **Next up:** build. The M0 cards are in `.planning/M0-issues.json` (28 stories, reviewed), waiting for the user to push them to Project #16. Branches are tested on a laptop; phone checks happen after merge on prod.
 - **Moved to server (2026-10-24):** work continues on `miraii` at `~/projects/GovTok` (moved from `~/GovTok` 2026-10-24; symlink left behind), using `claude --remote-control` inside tmux. The original conversation was on the laptop; this doc plus memory is the only carried-over context.
@@ -287,6 +287,7 @@ Updated incrementally as decisions are locked in.
 - `held` → `open` only by hand, in the Convex dashboard. No moderation UI (§8).
 - No blurring: Claude can't give per-frame boxes for a whole video, and re-encoding is too heavy for tonight.
 - The mute is a playback flag only. The stored file keeps its audio. 📌 Deferred (§8): strip audio server-side for the pilot.
+- **Titles never repeat what a `mute` hides** (locked 2026-10-25, found in the US20 review): Claude writes the public `title` from the same transcript and description that a `mute` hides, so the screening prompt keeps titles free of anything that would trigger `mute`. Titles show on feed cards and as map marker tooltips. US12's title rule already bans names, addresses, house numbers, plates, phone numbers and the street. **Open gap:** slurs aren't in that rule yet.
 - Rationale: every outcome resolves without a human, since no one staffs a queue on Sunday morning. Each verdict maps to exactly one action.
 - Rejected: hold every flag for human review. Simpler, but held posts would just sit unreviewed.
 
@@ -433,6 +434,7 @@ Updated incrementally as decisions are locked in.
 - Reporting by text message (Scope non-goal for Cal Hacks)
 - Spanish UI and posts
 - Video hosting at pilot scale (free-tier bandwidth)
+- Database read bandwidth of the live map query (2026-10-25, accepted for M0): `mapReports` (§5.2.1) reads every public report in full (~1.5–2 KB each, mostly transcript and segments) and re-runs on every write to an open or fixed report while anyone has the map open: posts clearing screening, me-toos, fixes, and reveal-view counts (§6.2.1, one write per viewer per session per fixed card, so ~50 people scrolling past 5 fixed cards add ~250 re-runs). The feed query has the same shape but wasn't measured here. Convex caches it across viewers. At 100 reports that is ~200 KB per re-run, or ~5,000 re-runs in the 1 GiB/month free tier. Revisit when the Convex dashboard shows database bandwidth above ~50% of the free tier, or above ~500 public reports. Options then: move transcript/segments/description into their own table, or keep a slim map-pin table
 - Staff moderation queue for flagged posts (until then, `held` is released by hand in the Convex dashboard, §4.2.1)
 - Strip audio server-side from `mute`-verdict clips (§4.2.1)
 - Onboarding real fixers (city staff, contractors) with the city

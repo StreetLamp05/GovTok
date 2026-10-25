@@ -16,6 +16,7 @@ import type * as lib_geo from "../lib/geo.js";
 import type * as lib_publicReport from "../lib/publicReport.js";
 import type * as lib_routing from "../lib/routing.js";
 import type * as lib_screening from "../lib/screening.js";
+import type * as map from "../map.js";
 import type * as placeholder from "../placeholder.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   "lib/publicReport": typeof lib_publicReport;
   "lib/routing": typeof lib_routing;
   "lib/screening": typeof lib_screening;
+  map: typeof map;
   placeholder: typeof placeholder;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
