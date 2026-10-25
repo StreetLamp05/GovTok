@@ -12,6 +12,7 @@ const AT = { lat: 33.8158, lng: -84.5825 };
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -204,7 +205,12 @@ describe("createReport", () => {
 
   test("the scheduled screenReport runs", async () => {
     vi.useFakeTimers();
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    // No keys, so screening fails before any network call (tests/convex/screening.test.ts
+    // covers the real pipeline with mocks).
+    vi.stubEnv("GROQ_API_KEY", "");
+    vi.stubEnv("GOOGLE_GEOCODING_KEY", "");
     const { t, jpegs, clip, scheduled } = setup();
     const reportId = await t.mutation(api.posts.createReport, {
       token: "a",
@@ -215,8 +221,9 @@ describe("createReport", () => {
     });
 
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    expect((await scheduled()).map((s) => s.state.kind)).toEqual(["success"]);
-    expect(log).toHaveBeenCalledWith(`screenReport stub: would screen report ${reportId} (attempt 0)`);
+    // The first try and its one retry (§4.2.1).
+    expect((await scheduled()).map((s) => s.state.kind)).toEqual(["success", "success"]);
+    expect(await t.run((ctx) => ctx.db.get(reportId))).toMatchObject({ status: "held", reason: "screening failed" });
   });
 });
 
