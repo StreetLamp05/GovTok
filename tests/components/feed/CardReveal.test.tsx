@@ -13,6 +13,8 @@ vi.mock("convex/react", () => ({
   useMutation: () => record,
   useQuery: (_ref: unknown, args?: unknown) => (args === undefined ? feed : undefined),
 }));
+// The Me too rail (US18) has its own tests.
+vi.mock("../../../components/feed/CardRail", () => ({ default: () => null }));
 
 const CLIP = "https://files.test/r1.mp4";
 
