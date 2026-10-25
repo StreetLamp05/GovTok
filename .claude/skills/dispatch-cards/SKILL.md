@@ -87,7 +87,6 @@ The main checkout stays on whatever branch it's on.
 
 Then prepare the worktree, which doesn't have the main checkout's untracked files:
 - Copy every ignored env file: `git ls-files --others --ignored --exclude-standard | grep -E '(^|/)\.env(\.local)?$' | grep -v node_modules` → same relative path in the worktree.
-- Copy `ENV_KEYS.md` (the local-only list of env key names; never committed) to the worktree root if it exists.
 - Install dependencies from the lockfile inside the worktree (`npm ci`, or the repo's package manager equivalent).
 - Run `scripts/worktree-setup.sh` inside the worktree. The copied `.env.local` points at the main checkout's dev deployment; this swaps it for the worktree's own local one so parallel cards don't push schemas over each other. If it fails, don't launch that card's runner; report it with the skipped cards.
 

@@ -58,4 +58,4 @@ When both notifications arrive, combine them into one concise report for the use
 3. Note explicitly if the two agents disagree with each other.
 4. A combined one-line verdict: does the implementation satisfy its acceptance criteria, and is it correctly scoped.
 
-If either agent surfaces a blocking finding, say so plainly and stop — don't silently patch it yourself. Fixing is a separate, explicit step the user asks for after seeing the review.
+If either agent surfaces a blocking finding, say so plainly and stop — don't silently patch it yourself. Fixing is a separate, explicit step the user asks for after seeing the review. (When `run-card` launched this review, its session fixes findings that need no decision afterwards, per `run-card` step 4. The reviewers still never fix.)

@@ -29,6 +29,7 @@ scripts/convex-env.sh --prod    # the production deployment
 |---|---|
 | `npm run dev` | Next.js and Convex together |
 | `npm test` | Vitest + `convex-test` for Convex functions |
+| `npm run test:browser` | Media tests in headless Chromium (`tests/browser/`). First run: `npx playwright install chromium` |
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Type check |
 | `npm run build` | Production build |
@@ -72,3 +73,32 @@ Only the Vercel Production build holds `CONVEX_DEPLOY_KEY`.
 ## Environment variables
 
 See [.env.example](.env.example). `.env.local` is git-ignored.
+
+## Test video transcription
+
+Set `GROQ_API_KEY` and `ADMIN_PASSCODE` on the Convex deployment, then run `npm run dev` and open
+`/admin/video-intake`. Record a clip in the browser or choose an MP4 or WebM
+video up to 25 MB. The page uploads the video to Convex storage, records it in
+the `videoIntake` table, sends it to Groq Whisper, and shows the transcript and
+timestamped segments. Sign in with the Convex `ADMIN_PASSCODE`; the session
+expires after 30 minutes. Intake records and their uploaded files are deleted
+after seven days.
+
+This is a protected test page, not the production report-screening flow.
+
+To run the Groq checks against the local US11 clips, make sure the Convex CLI
+is logged in and the selected deployment has `GROQ_API_KEY`, then run:
+
+```bash
+node --experimental-strip-types scripts/try-transcribe.ts
+```
+
+The script reads the key from Convex without printing it and sends each fixture
+to Groq. It also tests audio-only derivatives of the user-provided clips; these
+have a black video track so the original visual content is not uploaded. The
+visual sample MP4s and test videos are git-ignored and must be supplied locally.
+If any are missing, the script reports all missing fixture paths before making
+requests. `labels.json` records fixture metadata and clearly marks unconfirmed
+expected labels. `transcription-output.json` contains spoken transcript text
+and segment text from the live fixture run; review it before sharing or
+publishing because transcripts can contain personal information.

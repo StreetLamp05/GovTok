@@ -502,7 +502,7 @@
     {
       "tempId": "F8",
       "title": "F8: Demo & impact",
-      "body": "Sample data seeded through the real pipeline, the impact numbers for the pitch, and the submission write-up.\n\nChildren: US25, US26, US27, US28.",
+      "body": "Sample data seeded through the real pipeline, the impact numbers for the pitch, and the submission write-up.\n\nChildren: US25, US26, US27, US28, US29.",
       "label": "feature",
       "area": "docs",
       "specSection": "§6.1.1, §6.2.1",
@@ -562,6 +562,20 @@
           ],
           "priority": "demo-critical",
           "agentDoable": false
+        },
+        {
+          "tempId": "US29",
+          "title": "US29: Remove the dev check pages before submission",
+          "body": "As a judge, I only see the real app: no half-finished test pages turn up at guessable URLs.\n\nThe dev check pages exist so the phone checks can run on prod after merge. `/dev/camera` comes from US4 and `/dev/recorder` from US7. Once those checks pass, the pages come out before the Devpost submission. **Don't start until the US4 and US7 manual phone checks have passed on prod**, because those checks use these pages.\n\n- Delete everything under `app/dev/`, along with tests that only cover those pages (`tests/app/dev/`)\n- Nothing in the app links to `/dev/*` afterwards\n- Shared code stays: `components/capture/VideoRecorder.tsx`, `lib/media/*` and their tests in `tests/lib/media`, `tests/components` and `tests/browser`\n\nFiles this card owns: `app/dev/*`, `tests/app/dev/*`. Put new code in these files so parallel cards don't collide.\n\nAcceptance criteria (agent-verifiable):\n- [ ] `app/dev/` and `tests/app/dev/` are gone, and `grep -r \"/dev/\" app components lib` finds no links to them\n- [ ] `next build` lists no `/dev/*` route, and `npm test`, `npm run test:browser`, the type check and lint pass\n\nManual test (human, on prod after merge; not part of the agent review):\n- [ ] `/dev/camera` and `/dev/recorder` return 404 on the production URL\n\nPriority: demo-critical.",
+          "area": "web",
+          "size": "S",
+          "specSection": "Scope (submission); US4 and US7 ACs",
+          "blockedBy": [
+            "US4",
+            "US7"
+          ],
+          "priority": "demo-critical",
+          "agentDoable": true
         }
       ]
     }
