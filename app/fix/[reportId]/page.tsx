@@ -4,20 +4,23 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { daysLabel, daysOpen, OwnerChip } from "@/components/fix/FixerList";
+import FixCapture from "@/components/fix/FixCapture";
+import { OwnerChip } from "@/components/fix/FixerList";
 import { api } from "@/convex/_generated/api";
 import type { PublicReport } from "@/convex/lib/publicReport";
+import { daysLabel, daysOpen } from "@/lib/days";
 import { useSoundUnlocked } from "@/lib/hooks/sound";
 import { useFixerToken } from "@/lib/hooks/useFixerToken";
 
-// Report detail for a fixer (§5.3.1): watch the original, then Record fix. A report that's
-// fixed while open here stays on screen as fixed, so US23's result isn't replaced.
+// Report detail for a fixer (§5.3.1): watch the original, then Record fix (FixCapture, US23).
+// A report that's fixed while open here stays on screen as fixed, so the result isn't replaced.
 export default function FixReportPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const token = useFixerToken();
   const session = useQuery(api.fixers.fixerSession, token ? { fixerToken: token } : "skip");
   // Skipped until the token checks out, since the query throws on a bad one.
   const report = useQuery(api.fixers.fixerReport, token && session ? { fixerToken: token, reportId } : "skip");
+  const [started, setStarted] = useState(false);
 
   if (token === undefined) return null;
   if (!token || session === null) return <Message text="Sign in to see this report." />;
@@ -35,15 +38,9 @@ export default function FixReportPage() {
         <StatusText report={report} />
         <span>· {report.meTooCount} me too</span>
       </div>
-      {report.status === "open" ? (
-        // US23 wires this to the fix capture screen (50 m geofence, silent clip, Claude check).
-        <button
-          type="button"
-          disabled
-          className="mt-6 w-full rounded-xl bg-[#0F1E33] py-3 font-bold text-white disabled:opacity-40"
-        >
-          Record fix
-        </button>
+      {report.status === "open" || started ? (
+        // Kept up once started, so Claude's verdict stays on screen after the report turns fixed.
+        <FixCapture report={report} auth={{ fixerToken: token }} onStart={() => setStarted(true)} />
       ) : (
         <p className="mt-6 rounded-xl bg-[#E3F5F2] py-3 text-center font-bold text-[#0F5E56]">
           Fixed{report.fixedByLabel ? ` by ${report.fixedByLabel}` : ""}

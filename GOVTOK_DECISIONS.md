@@ -104,6 +104,7 @@ Updated incrementally as decisions are locked in.
 **1.1.2 Map library — Google Maps**
 - Google Maps JavaScript API, wrapped with `@vis.gl/react-google-maps`. Clustering comes from `@googlemaps/markerclusterer`.
 - Street names for cards come from reverse geocoding (Geocoding API) on the same key. Run it once per report in a Convex action and store the result.
+  - (2026-10-25, US13) The street is the `route` component's short name ("Floyd Rd"), never a house number, because it's public (§7.1.1). A retry or rescreen reuses a stored street. If geocoding fails, the report has no street and screening carries on.
 - Setup: a Google Cloud billing account with a card on file. One browser key restricted to the Vercel domain and localhost. Reverse geocoding runs server-side with a second key restricted by API.
 - Rationale: a nod to Google at the Oct 30 event, a polished look on phones, and one account for both the map and the address.
 - Rejected:
@@ -125,6 +126,7 @@ Updated incrementally as decisions are locked in.
 - The Messages API takes no video and no audio input (it accepts only text, images and PDFs). That's why both frames and a transcript are needed.
 - Audio is **kept** in the published clip. This is the user's call (2026-10-24): the hackathon pitch comes first, and narration ("this has been here since June") makes stronger cards. Making it fit Mableton can happen after Cal Hacks.
 - Cost: about 8k input tokens per post, roughly $0.035 on Opus 5.5 ($4 / $20 per 1M tokens). 1,000 posts cost about $35.
+  - (2026-10-25) A 10-photo slideshow comes to about 16k input tokens (~$0.065), and a fix check against a 10-photo original about 26k (~$0.10). Fine at demo scale.
 - Rationale: Opus has the best vision, and missing a face or plate is the expensive failure. A cheaper model saves only cents at this scale. Screening is async (the post is "pending" until it clears), so latency doesn't matter much.
 - Rejected:
   - Sonnet 5.5 (~$0.018 per post): close in quality, but the savings are negligible.
@@ -137,6 +139,7 @@ Updated incrementally as decisions are locked in.
 **1.1.4 Speech-to-text engine — Groq Whisper large-v3-turbo**
 - Videos only; slideshows skip this step (§4.1.1). Transcription runs in the same Convex action as the Claude call (§1.1.3). The action reads the clip from Convex storage and POSTs it to Groq's OpenAI-compatible transcription endpoint (`whisper-large-v3-turbo`, `verbose_json` for segment timestamps). The transcript and its segments are saved on the report.
 - Groq accepts the browser's webm/mp4 directly, so there's no ffmpeg step. The free-tier file limit is about 25 MB, and clips stay well under it (§4.1.1).
+  - (2026-10-25, US8) One limit everywhere: `MAX_CLIP_BYTES = 25,000,000` bytes (`convex/lib/clipLimit.ts`), used by posts, the admin intake and transcription. It's 25,000,000 rather than 25 MiB so a clip that passes our checks can't fail at Groq, whichever unit Groq means.
 - Whisper can invent text on near-silent clips ("Thanks for watching"). Claude's prompt treats the transcript as untrusted and possibly empty.
 - Cost: about $0.04 per hour of audio, billed at a 10s minimum per request. Effectively free at every scale we plan for.
 - Key: `GROQ_API_KEY`, kept in Convex env only.
@@ -157,7 +160,7 @@ Updated incrementally as decisions are locked in.
   - `mediaType: video | photos` (retcon, §4.1.1). `description` (optional, up to 280 characters).
   - Original media: `clipStorageId` (videos), `frameStorageIds[]` (about 6 frame JPEGs for videos, or the 1–10 photos for slideshows; reused by §4.3.1), `transcript`, `segments` (videos).
   - Location: `lat`, `lng`, `street`.
-  - `category`, plus `owner` and `agency` stored at creation from the §2.1.2 table. `title`, `status` (§2.1.3).
+  - `category`, plus `owner` and `agency` from the §2.1.2 table, stored when screening sets the category (2026-10-25, US8: they're unknown while the report is `pending`). `title`, `status` (§2.1.3).
   - Screening: `verdict`, `reason`, `audioMuted` (§4.2.1).
   - `isSample` (§6.1.1).
   - `meTooCount`, `lastActivityAt` (feed order, §5.1.2), `revealViews` (§6.2.1).
@@ -248,6 +251,8 @@ Updated incrementally as decisions are locked in.
 - **Frames from a file** (sweep, 2026-10-24): for any clip not recorded live, load the blob into a hidden `<video>`, seek to 6 evenly spaced times, and grab each frame with a canvas. Used by the native-camera fallback and by demo-mode uploads (§6.1.1).
 - ~~**Video only**, for both posts and fixes.~~
 - **Retcon (2026-10-24):** a post is a **video or a photo slideshow** of 1–10 photos, picked from the camera or gallery (`<input type="file" accept="image/*" multiple>`) and resized in the browser to 1280px or less on the long edge. **Fixes stay video only** (§4.3.1). Reason: the user wants TikTok photo mode as an option.
+  - (2026-10-25) Photos are pinned to where the phone is when posting, not where they were taken: re-encoding strips their EXIF GPS (and iOS Safari often removes it from library picks anyway). Photos mode says "Your post is pinned to where you are now, so post from where the problem is."
+  - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
 - **Optional description** (2026-10-24): a text field of up to 280 characters on every post, video or slideshow. It goes into the Claude call (§1.1.3) and is screened (§4.2.1).
 - Storage: about 1 GB free in Convex works out to roughly 250 clips (§8 covers pilot-scale hosting).
 - Rationale: controls size, length and format, which keeps clips under the Groq file limit (§1.1.4) and the Convex 2-min upload timeout (§1.1.1), and makes them play on iOS and Android.
@@ -289,6 +294,10 @@ Updated incrementally as decisions are locked in.
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
 - **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
 - `held` → `open` only by hand, in the Convex dashboard. No moderation UI (§8).
+  - (2026-10-25, US13) The operator tools are `npx convex run screeningDb:release` and `screeningDb:rescreen`.
+    - `release` refuses a report with no category or title (rescreen it instead). A `retake`, `emergency` or `reject` report also needs `"force": true`, because precedence means its audio and text were never checked for `mute`. Releasing bumps `lastActivityAt` (§5.1.2).
+    - `rescreen` re-runs screening on a `held` report, or on a `pending` one whose screening died (an action that crashes never retries). That's an operator-only exception to §2.1.3. A duplicate run is safe, because a result only lands while the report is still `pending` with the same media.
+  - (2026-10-25, US13) "Screening failed" also clears the earlier result (category, title, owner, agency, mute), so a report retaken after a verdict can't be released with the old verdict's fields.
 - No blurring: Claude can't give per-frame boxes for a whole video, and re-encoding is too heavy for tonight.
 - The mute is a playback flag only. The stored file keeps its audio. 📌 Deferred (§8): strip audio server-side for the pilot.
 - **Titles never repeat what a `mute` hides** (locked 2026-10-25, found in the US20 review): Claude writes the public `title` from the same transcript and description that a `mute` hides, so the screening prompt keeps titles free of anything that would trigger `mute`. Titles show on feed cards and as map marker tooltips. US12's title rule already bans names, addresses, house numbers, plates, phone numbers and the street. **Open gap:** slurs aren't in that rule yet.
@@ -305,6 +314,12 @@ Updated incrementally as decisions are locked in.
   - Is the problem visibly resolved?
   - Any identifiable faces or readable plates? This applies §4.2.1's screening, so no workers are shown.
 - On `verified`, set `status: fixed`, `fixStorageId`, `fixedAt`, `fixedBy`, `fixedByKind` and bump `lastActivityAt` (§2.1.1, §2.1.3, §5.1.2). On anything else, show the reason to the fixer, who can retake.
+- **Verdict details** (2026-10-25, US22):
+  - Precedence: `not_fixed` > `retake` > `verified`. A clip that doesn't show the fix is never published, so a face in it doesn't matter (like §4.2.1's selfie exception).
+  - Claude also gets the report's category and title (the title is treated as untrusted data).
+  - If Claude errors twice, the attempt is `failed` with "We couldn't check this clip. Try recording it again." An attempt whose report was closed by another fix is `superseded`.
+  - Problems that only show at night (a dark streetlight) stay strict: if the repair can't be seen in the clip, the verdict is `not_fixed` and the reason asks for a clip filmed after dark with the light on. §4.2.1 lets such reports through on description alone, so without this they could never be verified from a daytime clip.
+  - Reasons are capped at 100 characters in code, on top of the prompt asking for brevity.
 - Rationale: the city doesn't declare a fix; Claude checks the footage. This is the trust anchor and the strongest Claude-in-product moment for the Anthropic track. Model: the dealership walk-around video (Scope).
 - Rejected: accepting any clip from a valid fixer. Simpler, but it reduces the story to "trust the city."
 - Resolves §1.1.3's forward reference: fix clips are muted at capture.
@@ -315,6 +330,9 @@ Updated incrementally as decisions are locked in.
 - Fixers are **not** limited to their own org's reports. A city crew can close a Cobb report it sees fixed. This settles §3.1.2's forward reference.
 - Card label: "Fix confirmed by a neighbor · Cobb DOT" when closed by a resident, "Fixed by Mableton Sanitation" when closed by a fixer.
 - Data: `fixedBy` holds either a fixer ID or a resident ID, plus `fixedByKind: fixer | resident` (an addition to §2.1.1).
+- Known weaknesses, accepted for the hackathon (2026-10-25, US23):
+  - The 50 m check, in the client and again in `submitFix`, trusts the coordinates the phone sends. Report locations are public (§7.1.1), so anyone can claim to be at one. Demo mode relies on exactly this (§6.1.1). What actually gates a fix is Claude's same-spot, problem-resolved check (§4.3.1), not the geofence.
+  - There's no limit on fix attempts, and each one is a Claude call.
 - Rationale: most reports (roads, stormwater, water, streetlights) aren't the city's. Without this, the most relatable reveal (a pothole) could never happen. It reuses the §4.3.1 code with one extra entry point, and it shows the community holding the county to account. The weak resident identity (§3.1.1) is acceptable because the geofence and Claude's check gate the result, not the identity.
 - Rejected:
   - Never closing reports the city doesn't own: a pointed story, but potholes could never show a fix.
@@ -337,12 +355,14 @@ Updated incrementally as decisions are locked in.
 - Slideshow posts swipe sideways through their photos. The description shows under the title (hidden when `audioMuted`).
 - Sound: phone browsers only autoplay video muted, so the first tap anywhere turns sound on for the session.
 - **Reveal (fixed cards):** play the original, then a ~0.7s stamp ("FIXED · N days · <who fixed it>"), then the fix clip, and loop the pair.
+  - Build details (2026-10-25, US19): under one day the stamp reads "FIXED · same day", matching the status chip (§6.1.1). A photo post shows its slideshow for 4 s before the stamp. An original clip that fails to load holds on its poster for 4 s, then the stamp and fix still play. A fixed report with no playable fix clip loops original → stamp → original. The fix clip is always muted. 📌 Follow-up (M1): the mockup's "Before / After · proof of fix" chip.
 - Rejected:
   - Split screen: halves too narrow on a 9:16 phone.
   - Swipe sideways between before and after: a hidden gesture judges would miss.
 
 **5.1.2 Feed order — most recent activity first**
 - Sort by `lastActivityAt`, descending. It's set at creation and bumped by each me-too and by the fix (§2.1.1). One Convex index.
+  - (2026-10-25, US13) It's also bumped when a report goes public (screening passes, or a held report is released), so a fresh post tops the feed. Samples are never bumped this way, so they keep their backdated order (§6.1.1).
 - Only `open` and `fixed` reports appear (§2.1.3). No personalization (Scope non-goal).
 - Rationale: a fresh fix jumps to the top, so reveals get seen (§5.1.1), and problems piling up me-toos rise.
 - Build-plan default (2026-10-24): the order is snapshotted when the feed mounts. Counts update live, but cards don't reorder under the user's finger; reopening the feed re-sorts it.
@@ -361,6 +381,7 @@ Updated incrementally as decisions are locked in.
 - `/fix` asks for the passcode once (§3.1.2). Then it lists `open` reports nearest first: thumbnail, title, owner chip, days open, me-too count. All owners are listed (§4.3.2).
 - Tap a report to watch the original, then **Record fix**, which enables only within 50 m. Then "Checking…", then `verified` or a retake with Claude's reason (§4.3.1).
 - Neighbors confirming fixes reuse the same capture and check screens, reached from "Is it fixed?" on a card (§4.3.2).
+  - Route (2026-10-25, US23): "Is it fixed?" opens `/confirm/<reportId>`, which shows the report's thumbnail, title and owner chip above the same capture screen. It has no tab bar, like `/fix`.
 
 ### 5.4 Me page
 
@@ -387,7 +408,8 @@ Updated incrementally as decisions are locked in.
   3. Play a pre-filmed before/after pair of the same California spot. Claude verifies it, and the reveal plays (§5.1.1).
 - Needs before/after pairs filmed at the same spot, so Claude's same-spot check passes honestly.
 - **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), then sets `isSample: true`. Claude really did screen the seeds.
-- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "0 days". This is acceptable only because the Sample badge labels them.
+- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "Open · today". This is acceptable only because the Sample badge labels them.
+  - Under one day, feed cards read "Open · today" / "Fixed same day", following the mockup (2026-10-25, US17). The fixer screens still say "0 days".
 - **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
 - **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
 - Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
@@ -405,6 +427,7 @@ Updated incrementally as decisions are locked in.
 - **Supporting, from stored data:**
   - **Days to a verified fix:** median, and the share fixed within 30 days, by owner (city / Cobb / utility), from `createdAt` and `fixedAt`. Shows which agency is slow.
   - **Views per fix reveal:** a `revealViews` counter on the report, incremented once per card view per session when the "FIXED" stamp first plays (§5.1.1), not on each loop. Shows whether fixes are actually seen, which is the premise.
+    - *(Clarified 2026-10-25, US19:)* once per report per browser session (sessionStorage), counted from the feed only. Me-page reveals (§5.4.1) count only if US24 opts in.
   - **Me-toos as a share of (reports + me-toos):** a proxy for duplicate calls avoided. *(Denominator clarified 2026-10-25, US26.)*
 - **For Cal Hacks:** there's no real data yet, so the pitch shows the plan plus the live counters from the demo. One stats query; no dashboard screen.
 - Rationale: the premise is that visible fixes build trust (Scope), so the headline measures trust, and the counters show the mechanism (fixes happen, and people see them). It answers the Anthropic track's impact plan and Microsoft's "measurable usefulness."
@@ -417,7 +440,7 @@ Updated incrementally as decisions are locked in.
 ### 7.1 Privacy
 
 **7.1.1 What's public — exact location, no poster identity; held clips purged after 7 days**
-- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1).
+- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow is pinned to where the phone was when posting, which may not be where the photos were taken (§4.1.1).
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
@@ -440,6 +463,7 @@ Updated incrementally as decisions are locked in.
 - Spanish UI and posts
 - Video hosting at pilot scale (free-tier bandwidth)
 - Database read bandwidth of the live map query (2026-10-25, accepted for M0): `mapReports` (§5.2.1) reads every public report in full (~1.5–2 KB each, mostly transcript and segments) and re-runs on every write to an open or fixed report while anyone has the map open: posts clearing screening, me-toos, fixes, and reveal-view counts (§6.2.1, one write per viewer per session per fixed card, so ~50 people scrolling past 5 fixed cards add ~250 re-runs). The feed query has the same shape but wasn't measured here. Convex caches it across viewers. At 100 reports that is ~200 KB per re-run, or ~5,000 re-runs in the 1 GiB/month free tier. Revisit when the Convex dashboard shows database bandwidth above ~50% of the free tier, or above ~500 public reports. Options then: move transcript/segments/description into their own table, or keep a slim map-pin table
+- Reveal-view counter abuse (2026-10-25, accepted for M0): `recordRevealView` (§6.2.1) takes no token, so a script looping over public report IDs can inflate `revealViews`. Each call is also a write that re-runs the feed and map queries for every viewer (see the bandwidth item above). A resident token wouldn't stop it, since tokens are made on the client (§3.1.1). Options then: a per-resident server-side dedup table, or a rate limit.
 - Staff moderation queue for flagged posts (until then, `held` is released by hand in the Convex dashboard, §4.2.1)
 - Strip audio server-side from `mute`-verdict clips (§4.2.1)
 - Onboarding real fixers (city staff, contractors) with the city
@@ -449,10 +473,13 @@ Updated incrementally as decisions are locked in.
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
 - A limit on fixer passcode guesses (§3.1.2)
+- A limit on proof-of-fix attempts per person and report, since each is a Claude call, plus a geofence that doesn't trust client-sent coordinates (§4.3.2)
 - Real resident identity for the pilot (Google sign-in or phone) so me-too counts can be trusted (§3.1.1)
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
 - Audio in clips for the Mableton pilot (privacy of narration and bystander voices; consider silent clips plus a text note)
+- Reports stuck in `pending` (2026-10-25, US13; manual for M0 via `rescreen`, §4.2.1): if Groq or Claude hangs until the action times out, no retry is scheduled, and the purge only removes `held` reports. Options: request timeouts in `transcribe` / `callClaudeJSON`, or a cron that holds stale `pending` reports as "screening failed"
+- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11
 
 ---
 

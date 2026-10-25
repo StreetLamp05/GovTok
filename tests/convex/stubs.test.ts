@@ -1,17 +1,21 @@
 import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
 import { internal } from "../../convex/_generated/api";
+import { SCREENING_FAILED_REASON } from "../../convex/lib/screening";
 import schema from "../../convex/schema";
 import { modules } from "./setup";
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
-test("a mutation can schedule both pipeline stubs with runAfter(0, …), with and without attempt, and they run", async () => {
+test("a mutation can schedule both pipeline actions with runAfter(0, …), with and without attempt, and they run", async () => {
   vi.useFakeTimers();
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.stubEnv("GOOGLE_GEOCODING_KEY", "");
   const t = convexTest(schema, modules);
 
   const { reportId, attemptId } = await t.run(async (ctx) => {
@@ -62,9 +66,11 @@ test("a mutation can schedule both pipeline stubs with runAfter(0, …), with an
   await t.finishAllScheduledFunctions(vi.runAllTimers);
 
   const done = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect());
-  expect(done.map((s) => s.state.kind)).toEqual(["success", "success", "success", "success"]);
-  expect(log).toHaveBeenCalledWith(`screenReport stub: would screen report ${reportId} (attempt 0)`);
-  expect(log).toHaveBeenCalledWith(`screenReport stub: would screen report ${reportId} (attempt 1)`);
-  expect(log).toHaveBeenCalledWith(`verifyFix stub: would check fix attempt ${attemptId} (attempt 0)`);
-  expect(log).toHaveBeenCalledWith(`verifyFix stub: would check fix attempt ${attemptId} (attempt 1)`);
+  // Plus the retry the first screenReport schedules for itself.
+  expect(done.map((s) => s.state.kind)).toEqual(["success", "success", "success", "success", "success"]);
+  // screenReport is no longer a stub (US13). This clip has no content type and there are no
+  // frames, so both tries fail before any network call and the report is held.
+  expect(await t.run((ctx) => ctx.db.get(reportId))).toMatchObject({ status: "held", reason: SCREENING_FAILED_REASON });
+  // verifyFix is no longer a stub (US22). The report isn't `open`, so the attempt is superseded.
+  expect(await t.run((ctx) => ctx.db.get(attemptId))).toMatchObject({ status: "superseded" });
 });

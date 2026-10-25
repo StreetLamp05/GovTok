@@ -1,13 +1,19 @@
-import type { ReactNode } from "react";
+"use client";
+
+import RevealPlayer, { useRecordRevealView } from "@/components/RevealPlayer";
 import type { FeedSlotProps } from "./FeedCard";
 
-// Stub (US16). US19 fills it with the before/after reveal on fixed cards (§5.1.1).
-// `video` is the pooled element playing the original clip (null for slideshows). The pool
-// starts it when the card comes on screen. Set `video.loop = false` to take over from there:
-// the pool then never restarts it on a tap, so a tap during the stamp or the fix clip doesn't
-// replay the original. For the fix clip, either render a separate always-muted <video> at
-// z-[2] (muted needs no unlock; load it only when `near`), or swap `video.src` to it and back,
-// with `video.dataset.silent = "true"` while it plays so the pool keeps it muted through the
-// sound unlock. The pool resets loop, src and silent when it gives the element to another card.
-const CardReveal: (props: FeedSlotProps) => ReactNode = () => null;
-export default CardReveal;
+// The before/after reveal on fixed cards (§5.1.1). `video` is the pooled element playing the
+// original (null for slideshows); RevealPlayer takes it over with `video.loop = false`, so the
+// pool never restarts it on a tap during the stamp or the fix clip. The fix clip plays in
+// RevealPlayer's own always-muted <video> at z-[2], loaded only when `near`. The pool resets
+// loop when it gives the element to another card.
+export default function CardReveal(props: FeedSlotProps) {
+  return props.report.status === "fixed" ? <FixedReveal {...props} /> : null;
+}
+
+// The first stamp per report per session records a reveal view (§6.2.1).
+function FixedReveal({ report, active, near, video }: FeedSlotProps) {
+  const record = useRecordRevealView();
+  return <RevealPlayer report={report} active={active} near={near} video={video} onStamp={() => record(report._id)} />;
+}

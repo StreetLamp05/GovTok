@@ -5,12 +5,11 @@ import { useState } from "react";
 import { haversineMeters, type Point } from "../../convex/lib/geo";
 import type { PublicReport } from "../../convex/lib/publicReport";
 import { OWNER_CHIP } from "../../convex/lib/routing";
+import { daysLabel, daysOpen } from "../../lib/days";
 import { useCurrentLocation } from "../../lib/hooks/useCurrentLocation";
 
 // The fixer's list of open reports, nearest first (§5.3.1). Distance is measured from
 // useCurrentLocation, which is DEMO_POINT in demo mode (§6.1.1).
-
-const DAY_MS = 86_400_000;
 
 export type RankedReport = { report: PublicReport; meters: number };
 
@@ -23,14 +22,6 @@ export function sortNearestFirst(reports: readonly PublicReport[], from: Point):
 
 export function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
-}
-
-export function daysOpen(createdAt: number, now: number): number {
-  return Math.max(0, Math.floor((now - createdAt) / DAY_MS));
-}
-
-export function daysLabel(days: number): string {
-  return days === 1 ? "1 day" : `${days} days`;
 }
 
 export function OwnerChip({ report }: { report: PublicReport }) {
