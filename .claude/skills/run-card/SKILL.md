@@ -24,11 +24,11 @@ The user is assumed to be away from the terminal. Any time you need their input,
 Invoke the `start-card` skill (via `Skill`, passing through any issue number/slug argument this skill received) and follow it through step 6.
 
 - Its "ask, then start" step is where most pings come from — apply the ping rule there.
-- Invoking `run-card` is the user's go-ahead to implement: write the plan to `tasks/todo.md` and begin without waiting for plan approval, **unless** step 5/6 surfaced something that needs a decision — then ping and ask.
+- Invoking `run-card` is the user's go-ahead to implement: write the plan to `tasks/<CardID>-todo.md` (e.g. `tasks/US4-todo.md`; one file per card so parallel cards never collide) and begin without waiting for plan approval, **unless** step 5/6 surfaced something that needs a decision — then ping and ask.
 
 ## 2. Implement and verify
 
-Build the card per the plan, tracking progress in `tasks/todo.md`. Before handing off, prove it works per the global "Verification Before Done" rule: run the relevant build, type check, tests (and a Convex push for schema/function changes). If something fails and the fix isn't determinable from the code/spec, ping and ask rather than pushing through.
+Build the card per the plan, tracking progress in `tasks/<CardID>-todo.md`. Before handing off, prove it works per the global "Verification Before Done" rule: run the relevant build, type check, tests (and a Convex push for schema/function changes). If something fails and the fix isn't determinable from the code/spec, ping and ask rather than pushing through.
 
 Other `run-card` sessions may be running in sibling worktrees (see `dispatch-cards`). Never push a worktree's functions or schema to the shared Convex cloud dev deployment, because each push replaces the others'. Use a local Convex deployment per worktree (see `npx convex dev --help`). If that isn't set up yet, serialize pushes with `flock /tmp/govtok-convex.lock <command>` and say so in the report.
 
@@ -53,6 +53,6 @@ Wait for the completion notification; don't poll and don't start reviewing in pa
 Relay the review agent's report to the user (it isn't shown to them automatically) — the AC checklist and findings, not a paraphrase that drops the evidence.
 
 - `NEEDS_INPUT`: ping (`<ID> review: <reason>`), present the report, and stop. Don't patch findings yourself — fixing is a separate step the user asks for (same rule as `review-card`).
-- `CLEAN`: ping once that it's ready for their manual commit (`<ID> done: all N ACs verified, review clean — ready to commit`), since the run can't finish without them either way. Add the review section to `tasks/todo.md`.
+- `CLEAN`: ping once that it's ready for their manual commit (`<ID> done: all N ACs verified, review clean — ready to commit`), since the run can't finish without them either way. Add the review section to `tasks/<CardID>-todo.md`.
 
 Never declare the card ready for Todo or touch board status — that's a human call.
