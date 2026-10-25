@@ -1,6 +1,6 @@
 ---
 name: dispatch-cards
-description: Pick every mutually independent GovTok user story from Todo (no fixed cap: everything that can run concurrently does), move them (and their parent Features) to In Development, and launch one Remote Control–enabled Claude session per card — each in its own git worktree and tmux window — running `run-card`. Use when the user wants to start a parallel batch of cards.
+description: Pick every mutually independent GovTok user story from Todo that isn't claimed by someone else (no fixed cap: everything that can run concurrently does), assign them to the user, move them (and their parent Features) to In Development, and launch one Remote Control–enabled Claude session per card — each in its own git worktree and tmux window — running `run-card`. Use when the user wants to start a parallel batch of cards.
 metadata:
   author: david
   version: "0.1.0"
@@ -14,6 +14,7 @@ Constants (IDs come from `.planning/project-fields.json`, never hardcoded here):
 - No cap on stories in flight. Every Todo story that's independent of the others and of what's already in flight gets dispatched (the user's call, 2026-10-24).
 - tmux session `gt-cards`, one window per card named by card ID.
 - Worktrees at `../GovTok-worktrees/<CardID>` (outside the repo, so root `eslint .` / `git status` never see them).
+- Assignee = claim. Two people work this board, and an assigned card belongs to its assignee. The dispatcher is `gh api user --jq .login` (`StreetLamp05` for David). Every dispatched story gets assigned to them (step 6), and cards assigned to anyone else are never picked.
 
 ## 1. Preflight — stop and tell the user if any fails
 
@@ -29,8 +30,9 @@ User stories are items whose title matches `^US\d+:` — match on the title, not
 
 ## 3. Build the candidate list
 
-Todo user stories, ordered by milestone (earliest due first), then issue number. For each, `gh issue view <n> -R StreetLamp05/GovTok --json number,title,body,parent,milestone`. Drop and record a reason for:
+Todo user stories, ordered by milestone (earliest due first), then issue number. For each, `gh issue view <n> -R StreetLamp05/GovTok --json number,title,body,parent,milestone,assignees`. Drop and record a reason for:
 
+- **Claimed by someone else**: `assignees` includes anyone other than the dispatcher. Unassigned cards and cards already assigned to the dispatcher stay in.
 - **Not agent-doable** — the ACs are actions only the user can take (submitting an external application, clicking through a third-party console, purchasing something).
 - **Open blocker** — `gh api repos/StreetLamp05/GovTok/issues/<n>/dependencies/blocked_by` returns any `open` issue.
 
@@ -50,16 +52,24 @@ Candidates that conflict with an in-flight story are out. From the rest, greedil
 
 `AskUserQuestion` with the picks (ID, title, one-line footprint) and every skipped card with its reason. The user is at the terminal when they invoke this, so no ping is needed. Proceed only on approval; apply any swaps they ask for.
 
-## 6. Move cards on the board
+## 6. Claim and move cards on the board
 
-For each picked story, and for its parent Feature if it isn't already In Development:
+First claim each picked story, right before moving it. Re-read its assignees, because the partner may have claimed it while step 5 waited. If someone else now holds it, drop it, tell the user, and don't create its worktree. Otherwise:
+
+```bash
+gh issue edit <n> --add-assignee @me -R StreetLamp05/GovTok
+```
+
+Only stories get assigned. Parent Features stay unassigned, since both people work under them.
+
+Then, for each claimed story, and for its parent Feature if it isn't already In Development:
 
 ```bash
 gh project item-edit --id <item-id> --project-id <project.id> \
   --field-id <fields.Status.id> --single-select-option-id <fields.Status.options["In Development"]>
 ```
 
-Item IDs come from the step-2 listing. If a parent Feature isn't on the board, `gh project item-add` it first. Don't touch any other field, and don't move anything else.
+Item IDs come from the step-2 listing. If a parent Feature isn't on the board, `gh project item-add` it first. Apart from the assignee and Status, don't touch any other field, and don't move anything else.
 
 ## 7. Create branch + worktree per card
 
@@ -79,6 +89,7 @@ Then prepare the worktree, which doesn't have the main checkout's untracked file
 - Copy every ignored env file: `git ls-files --others --ignored --exclude-standard | grep -E '(^|/)\.env(\.local)?$' | grep -v node_modules` → same relative path in the worktree.
 - Copy `ENV_KEYS.md` (the local-only list of env key names; never committed) to the worktree root if it exists.
 - Install dependencies from the lockfile inside the worktree (`npm ci`, or the repo's package manager equivalent).
+- Run `scripts/worktree-setup.sh` inside the worktree. The copied `.env.local` points at the main checkout's dev deployment; this swaps it for the worktree's own local one so parallel cards don't push schemas over each other. If it fails, don't launch that card's runner; report it with the skipped cards.
 
 ## 8. Launch the runners in tmux
 

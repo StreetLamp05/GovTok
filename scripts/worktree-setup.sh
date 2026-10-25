@@ -11,6 +11,12 @@ cd "$(dirname "$0")/.."
 
 ENV_FILE=".env.local"
 
+# The main checkout's .env.local points at the team's dev deployment; never rewrite it.
+if [ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ]; then
+  echo "error: run this inside a git worktree, not the main checkout." >&2
+  exit 1
+fi
+
 if [ ! -f "$ENV_FILE" ]; then
   echo "error: $ENV_FILE not found in $(pwd). Copy it from the main checkout first." >&2
   exit 1

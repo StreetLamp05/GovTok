@@ -4,6 +4,9 @@
 *.env
 !.env.example
 
+# Local-only list of env key names (copied into worktrees by dispatch-cards)
+ENV_KEYS.md
+
 # Local Convex deployment state (one per worktree, see scripts/worktree-setup.sh)
 .convex/
 

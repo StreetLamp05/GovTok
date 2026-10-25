@@ -41,7 +41,7 @@ Each worktree needs its own local Convex deployment, otherwise every worktree pu
 scripts/worktree-setup.sh
 ```
 
-It removes `CONVEX_DEPLOYMENT` and the related URLs from the worktree's `.env.local`, starts a fresh anonymous local deployment, copies the server keys onto it with `convex-env.sh`, and exits with an error if the result is not a local deployment. Do not run it in your main checkout: it rewrites `.env.local`.
+It removes `CONVEX_DEPLOYMENT` and the related URLs from the worktree's `.env.local`, starts a fresh anonymous local deployment, copies the server keys onto it with `convex-env.sh`, and exits with an error if the result is not a local deployment. It refuses to run in the main checkout, whose `.env.local` it would otherwise rewrite.
 
 Only the Vercel Production build holds `CONVEX_DEPLOY_KEY`.
 
