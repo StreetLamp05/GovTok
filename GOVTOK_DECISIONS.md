@@ -224,13 +224,14 @@ Updated incrementally as decisions are locked in.
 - 📌 Deferred (§8): real resident identity for the pilot (Google sign-in or phone), so me-too counts can be trusted.
 
 **3.1.2 Fixer access — a passcode per fixer, DB-only**
-- `fixers {name, org, passcode}`, seeded by hand (e.g. "Mableton Sanitation / 4821").
+- `fixers {name, org, passcode, token}`, seeded by hand (e.g. "Mableton Sanitation / 4821"). `token` is issued at the first passcode check and reused after that.
 - A hidden `/fix` route asks for the passcode once. A Convex mutation checks it server-side and returns a fixer token, which the browser stores in `localStorage` (screen: §5.3.1).
 - The fix mutation refuses any request without a valid fixer token. Any fixer can close any `open` report.
 - The fixed card shows the fixer's **org** ("Fixed by Mableton Sanitation"), never a person's name (Scope: "no workers shown").
 - Prize check (2026-10-24): none of the target tracks scores auth. Microsoft's "path from prototype to production" is answered by a pitch line instead: "Pilot: residents sign in with Google or phone, and city staff use the city's single sign-on." The only auth prize is MLH Auth0 (headphones), not worth the setup.
+- Known weaknesses, accepted for the hackathon (2026-10-25, US21): there's no limit on passcode guesses, and a passcode is revoked only by deleting its fixer row in the Convex dashboard (re-seeding a fixer under a new passcode leaves the old one working).
 - 📌 **Forward reference (§4.3.2)**: whether fixers are limited to reports their org owns (city staff can't close Cobb reports).
-- 📌 Deferred (§8): city single sign-on for fixers in the pilot.
+- 📌 Deferred (§8): city single sign-on for fixers in the pilot, and a limit on passcode guesses.
 
 ---
 
@@ -281,6 +282,9 @@ Updated incrementally as decisions are locked in.
 - The poster stays on "Checking…" until the verdict arrives, so the emergency screen shows within seconds.
 - **Where the poster sees the result:** live on the "Checking…" screen, and afterwards on their private Me page (§5.4.1).
 - **Precedence** when several verdicts apply: `emergency` > `retake` > `reject` > `mute` > `pass`.
+  - Exception (2026-10-25, US12): a post with no public-space problem at all (a selfie, off-topic content) is `reject` even when a face or plate is visible, because a retake makes no sense when there's nothing to film. `emergency` still wins.
+  - `mute` "addresses" (2026-10-25, US12) means an address tied to a person: where someone lives or works ("John lives at 412 Elm St"). The address or street of the problem itself isn't private, since the location is public anyway (§7.1.1).
+  - `reject` needs neither the frames nor the transcript/description to show a problem. A problem that's hard to see in about 6 frames but clearly described (a dark streetlight at dusk, a gas smell) isn't rejected, since held posts are purged after 7 days (§7.1.1).
 - **Failure:** if Groq or Claude errors, retry once, then `held` with reason "screening failed."
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
 - **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
@@ -400,7 +404,7 @@ Updated incrementally as decisions are locked in.
 - **Supporting, from stored data:**
   - **Days to a verified fix:** median, and the share fixed within 30 days, by owner (city / Cobb / utility), from `createdAt` and `fixedAt`. Shows which agency is slow.
   - **Views per fix reveal:** a `revealViews` counter on the report, incremented once per card view per session when the "FIXED" stamp first plays (§5.1.1), not on each loop. Shows whether fixes are actually seen, which is the premise.
-  - **Me-toos as a share of reports:** a proxy for duplicate calls avoided.
+  - **Me-toos as a share of (reports + me-toos):** a proxy for duplicate calls avoided. *(Denominator clarified 2026-10-25, US26.)*
 - **For Cal Hacks:** there's no real data yet, so the pitch shows the plan plus the live counters from the demo. One stats query; no dashboard screen.
 - Rationale: the premise is that visible fixes build trust (Scope), so the headline measures trust, and the counters show the mechanism (fixes happen, and people see them). It answers the Anthropic track's impact plan and Microsoft's "measurable usefulness."
 - Rejected: an in-app trust question shown on first visit and after a week. More responses, but a new screen and timing logic. 📌 Deferred (§8).
@@ -417,6 +421,7 @@ Updated incrementally as decisions are locked in.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
   - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
+    - (2026-10-25) Age runs from the newest file upload, so a retake (§4.2.1) restarts the 7 days. Samples (§6.1.1) are never purged, because their `createdAt` is backdated.
   - Published reports (`open` / `fixed`) are kept indefinitely; the public record is the point.
 - Rejected:
   - Blurring locations to street level: breaks fixer navigation and the 50 m checks.
@@ -441,6 +446,7 @@ Updated incrementally as decisions are locked in.
 - Replace the California samples with real Mableton footage, and turn `?demo=mableton` off (§6.1.1)
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
+- A limit on fixer passcode guesses (§3.1.2)
 - Real resident identity for the pilot (Google sign-in or phone) so me-too counts can be trusted (§3.1.1)
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
@@ -467,7 +473,7 @@ Updated incrementally as decisions are locked in.
 - ~~3.1.2 Fixer access (who can close a report)~~ ✓ *(passcode per fixer)*
 
 **4.1 Posting**
-- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s, video only)*
+- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s; posts are a video or a photo slideshow, fixes video only)*
 - ~~4.1.2 Duplicate check when posting~~ ✓ *(location pre-check, 50 m)*
 
 **4.2 Screening**
@@ -504,7 +510,7 @@ Updated incrementally as decisions are locked in.
 ## Next steps (build)
 1. **Scaffold:** Next.js App Router + Convex. Deploy to Vercel immediately so camera access works over HTTPS (§1.1.1).
 2. **Keys:** Google Maps browser key + Geocoding key (§1.1.2), `ANTHROPIC_API_KEY` and `GROQ_API_KEY` in Convex env (§1.1.3, §1.1.4).
-3. **Schema:** `reports`, `meToos`, `residents`, `fixers` (§2.1.1), with indexes on `status`+`lastActivityAt` and on lat/lng for bounding-box queries.
+3. **Schema:** `reports`, `meToos`, `residents`, `fixers`, `fixAttempts` (§2.1.1). Indexes: `lastActivityAt` for the feed (the one index of §5.1.2; the query filters to `open` / `fixed`), and `status`+`lat` for bounding-box queries.
 4. **Pipeline:** upload → frames, transcript or photos → one Claude call (structured JSON) → verdict → status (§1.1.3, §4.2.1). Then the fix check (§4.3.1).
 5. **Surfaces** (partner, from wireframes): feed + reveal (§5.1), map (§5.2), `/fix` (§5.3), Me page (§5.4), capture screens (§4.1).
 6. **Demo:** seed action + `?demo=mableton` (§6.1.1). Film the before/after pairs.
