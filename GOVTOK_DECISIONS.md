@@ -306,6 +306,12 @@ Updated incrementally as decisions are locked in.
   - Is the problem visibly resolved?
   - Any identifiable faces or readable plates? This applies §4.2.1's screening, so no workers are shown.
 - On `verified`, set `status: fixed`, `fixStorageId`, `fixedAt`, `fixedBy`, `fixedByKind` and bump `lastActivityAt` (§2.1.1, §2.1.3, §5.1.2). On anything else, show the reason to the fixer, who can retake.
+- **Verdict details** (2026-10-25, US22):
+  - Precedence: `not_fixed` > `retake` > `verified`. A clip that doesn't show the fix is never published, so a face in it doesn't matter (like §4.2.1's selfie exception).
+  - Claude also gets the report's category and title (the title is treated as untrusted data).
+  - If Claude errors twice, the attempt is `failed` with "We couldn't check this clip. Try recording it again." An attempt whose report was closed by another fix is `superseded`.
+  - Problems that only show at night (a dark streetlight) stay strict: if the repair can't be seen in the clip, the verdict is `not_fixed` and the reason asks for a clip filmed after dark with the light on. §4.2.1 lets such reports through on description alone, so without this they could never be verified from a daytime clip.
+  - Reasons are capped at 100 characters in code, on top of the prompt asking for brevity.
 - Rationale: the city doesn't declare a fix; Claude checks the footage. This is the trust anchor and the strongest Claude-in-product moment for the Anthropic track. Model: the dealership walk-around video (Scope).
 - Rejected: accepting any clip from a valid fixer. Simpler, but it reduces the story to "trust the city."
 - Resolves §1.1.3's forward reference: fix clips are muted at capture.

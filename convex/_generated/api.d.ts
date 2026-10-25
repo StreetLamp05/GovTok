@@ -16,6 +16,7 @@ import type * as fixVerificationDb from "../fixVerificationDb.js";
 import type * as fixers from "../fixers.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_claude from "../lib/claude.js";
+import type * as lib_fixPrompt from "../lib/fixPrompt.js";
 import type * as lib_clipLimit from "../lib/clipLimit.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_postLimits from "../lib/postLimits.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   fixers: typeof fixers;
   "lib/auth": typeof lib_auth;
   "lib/claude": typeof lib_claude;
+  "lib/fixPrompt": typeof lib_fixPrompt;
   "lib/clipLimit": typeof lib_clipLimit;
   "lib/geo": typeof lib_geo;
   "lib/postLimits": typeof lib_postLimits;
