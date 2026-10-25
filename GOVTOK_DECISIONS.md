@@ -125,6 +125,7 @@ Updated incrementally as decisions are locked in.
 - The Messages API takes no video and no audio input (it accepts only text, images and PDFs). That's why both frames and a transcript are needed.
 - Audio is **kept** in the published clip. This is the user's call (2026-10-24): the hackathon pitch comes first, and narration ("this has been here since June") makes stronger cards. Making it fit Mableton can happen after Cal Hacks.
 - Cost: about 8k input tokens per post, roughly $0.035 on Opus 5.5 ($4 / $20 per 1M tokens). 1,000 posts cost about $35.
+  - (2026-10-25) A 10-photo slideshow comes to about 16k input tokens (~$0.065), and a fix check against a 10-photo original about 26k (~$0.10). Fine at demo scale.
 - Rationale: Opus has the best vision, and missing a face or plate is the expensive failure. A cheaper model saves only cents at this scale. Screening is async (the post is "pending" until it clears), so latency doesn't matter much.
 - Rejected:
   - Sonnet 5.5 (~$0.018 per post): close in quality, but the savings are negligible.
@@ -249,6 +250,8 @@ Updated incrementally as decisions are locked in.
 - **Frames from a file** (sweep, 2026-10-24): for any clip not recorded live, load the blob into a hidden `<video>`, seek to 6 evenly spaced times, and grab each frame with a canvas. Used by the native-camera fallback and by demo-mode uploads (§6.1.1).
 - ~~**Video only**, for both posts and fixes.~~
 - **Retcon (2026-10-24):** a post is a **video or a photo slideshow** of 1–10 photos, picked from the camera or gallery (`<input type="file" accept="image/*" multiple>`) and resized in the browser to 1280px or less on the long edge. **Fixes stay video only** (§4.3.1). Reason: the user wants TikTok photo mode as an option.
+  - (2026-10-25) Photos are pinned to where the phone is when posting, not where they were taken: re-encoding strips their EXIF GPS (and iOS Safari often removes it from library picks anyway). Photos mode says "Your post is pinned to where you are now, so post from where the problem is."
+  - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
 - **Optional description** (2026-10-24): a text field of up to 280 characters on every post, video or slideshow. It goes into the Claude call (§1.1.3) and is screened (§4.2.1).
 - Storage: about 1 GB free in Convex works out to roughly 250 clips (§8 covers pilot-scale hosting).
 - Rationale: controls size, length and format, which keeps clips under the Groq file limit (§1.1.4) and the Convex 2-min upload timeout (§1.1.1), and makes them play on iOS and Android.
@@ -425,7 +428,7 @@ Updated incrementally as decisions are locked in.
 ### 7.1 Privacy
 
 **7.1.1 What's public — exact location, no poster identity; held clips purged after 7 days**
-- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1).
+- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow is pinned to where the phone was when posting, which may not be where the photos were taken (§4.1.1).
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**

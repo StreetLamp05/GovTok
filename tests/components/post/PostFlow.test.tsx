@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { ConvexError } from "convex/values";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { RecordedClip } from "../../../components/capture/VideoRecorder";
@@ -43,6 +44,23 @@ vi.mock("../../../components/capture/VideoRecorder", () => ({
     return <button onClick={() => props.onDone(CLIP)}>fake record</button>;
   },
 }));
+
+// The picker (US9) is tested on its own; here it hands back 3 JPEGs on a tap. "fake select"
+// stands in for the picker's own state (photos picked but not yet used).
+vi.mock("../../../components/capture/PhotoPicker", () => ({
+  default: function FakePicker(props: { onDone: (jpegs: Blob[]) => void }) {
+    const [selected, setSelected] = useState(0);
+    return (
+      <>
+        <button onClick={() => setSelected((n) => n + 1)}>fake select</button>
+        <span>{selected} selected</span>
+        <button onClick={() => props.onDone(PHOTOS)}>fake pick</button>
+      </>
+    );
+  },
+}));
+
+const PHOTOS = Array.from({ length: 3 }, (_, i) => new Blob([`photo ${i}`], { type: "image/jpeg" }));
 
 const CLIP: RecordedClip = {
   blob: new Blob(["clip"], { type: "video/mp4" }),
@@ -225,5 +243,107 @@ describe("Checking… screen", () => {
     expect(screen.getByText("A face is visible")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Post another" }));
     expect(screen.getByText("fake record")).toBeTruthy();
+  });
+});
+
+describe("Photos", () => {
+  const choosePhotos = () => fireEvent.click(screen.getByRole("button", { name: "Photos" }));
+  // A URL per photo, as the browser gives, since the preview keys its images by URL.
+  beforeEach(() => {
+    let n = 0;
+    URL.createObjectURL = vi.fn(() => `blob:preview-${++n}`);
+  });
+
+  test("Video is chosen by default; Photos swaps the recorder for the photo picker", () => {
+    render(<PostFlow />);
+    expect(screen.getByRole("button", { name: "Video" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("fake record")).toBeTruthy();
+
+    choosePhotos();
+    expect(screen.getByRole("button", { name: "Photos" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByText("fake record")).toBeNull();
+    expect(screen.getByText("fake pick")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Video" }));
+    expect(screen.getByText("fake record")).toBeTruthy();
+  });
+
+  test("switching to Video and back keeps the photos already picked", () => {
+    render(<PostFlow />);
+    choosePhotos();
+    fireEvent.click(screen.getByText("fake select"));
+    expect(screen.getByText("1 selected")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Video" }));
+    expect(screen.getByText("fake record")).toBeTruthy();
+    expect(screen.getByText("fake select").closest(".hidden")).toBeTruthy();
+    choosePhotos();
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(screen.getByText("fake select").closest(".hidden")).toBeNull();
+  });
+
+  test("Photos mode says the post is pinned to where you are now", () => {
+    render(<PostFlow />);
+    choosePhotos();
+    expect(screen.getByText(/pinned to where you are now, so post from where the problem is/)).toBeTruthy();
+  });
+
+  test("the preview shows every photo and has the description box", () => {
+    render(<PostFlow />);
+    choosePhotos();
+    fireEvent.click(screen.getByText("fake pick"));
+    expect(screen.getAllByRole("img").map((img) => img.getAttribute("alt"))).toEqual([
+      "Photo 1 of 3",
+      "Photo 2 of 3",
+      "Photo 3 of 3",
+    ]);
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  test("Submit uploads each photo, then calls createReport with mediaType photos and no clip", async () => {
+    render(<PostFlow />);
+    choosePhotos();
+    fireEvent.click(screen.getByText("fake pick"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: " Graffiti on the bridge " } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+
+    expect(state.uploads).toEqual(PHOTOS);
+    expect(state.createReport).toHaveBeenCalledTimes(1);
+    const args = state.createReport.mock.calls[0][0];
+    expect(args).toEqual({
+      token: "token-a",
+      mediaType: "photos",
+      frameStorageIds: ["storage-1", "storage-2", "storage-3"],
+      description: "Graffiti on the bridge",
+      lat: 33.8158,
+      lng: -84.5825,
+    });
+    expect(args).not.toHaveProperty("clipStorageId");
+    expect(screen.getByRole("heading").textContent).toBe("Checking…");
+  });
+
+  test("Pick again drops the photos and goes back to the picker, keeping the description", () => {
+    render(<PostFlow />);
+    choosePhotos();
+    fireEvent.click(screen.getByText("fake pick"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Broken bench" } });
+    fireEvent.click(screen.getByRole("button", { name: "Pick again" }));
+    expect(vi.mocked(URL.revokeObjectURL).mock.calls.map(([url]) => url)).toEqual(["blob:preview-1", "blob:preview-2", "blob:preview-3"]);
+    expect(screen.getByText("fake pick")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("fake pick"));
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Broken bench");
+  });
+
+  test("a failed photo upload shows the generic error and doesn't create a report", async () => {
+    const { uploadFile } = await import("../../../lib/upload");
+    vi.mocked(uploadFile).mockRejectedValueOnce(new Error("Upload failed (500)"));
+    render(<PostFlow />);
+    choosePhotos();
+    fireEvent.click(screen.getByText("fake pick"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+    expect(screen.getByRole("alert").textContent).toMatch(/couldn't send your post/);
+    expect(state.createReport).not.toHaveBeenCalled();
   });
 });
