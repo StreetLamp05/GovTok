@@ -16,6 +16,7 @@ import type * as fixVerificationDb from "../fixVerificationDb.js";
 import type * as fixers from "../fixers.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_claude from "../lib/claude.js";
+import type * as lib_fixPrompt from "../lib/fixPrompt.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_publicReport from "../lib/publicReport.js";
 import type * as lib_routing from "../lib/routing.js";
@@ -28,10 +29,10 @@ import type * as placeholder from "../placeholder.js";
 import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
+import type * as stats from "../stats.js";
 import type * as videoIntake from "../videoIntake.js";
 import type * as videoIntakeAuth from "../videoIntakeAuth.js";
 import type * as videoIntakeDb from "../videoIntakeDb.js";
-import type * as stats from "../stats.js";
 
 import type {
   ApiFromModules,
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   fixers: typeof fixers;
   "lib/auth": typeof lib_auth;
   "lib/claude": typeof lib_claude;
+  "lib/fixPrompt": typeof lib_fixPrompt;
   "lib/geo": typeof lib_geo;
   "lib/publicReport": typeof lib_publicReport;
   "lib/routing": typeof lib_routing;
@@ -60,10 +62,10 @@ declare const fullApi: ApiFromModules<{
   purge: typeof purge;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
+  stats: typeof stats;
   videoIntake: typeof videoIntake;
   videoIntakeAuth: typeof videoIntakeAuth;
   videoIntakeDb: typeof videoIntakeDb;
-  stats: typeof stats;
 }>;
 
 /**

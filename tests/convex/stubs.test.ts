@@ -65,6 +65,6 @@ test("a mutation can schedule both pipeline stubs with runAfter(0, …), with an
   expect(done.map((s) => s.state.kind)).toEqual(["success", "success", "success", "success"]);
   expect(log).toHaveBeenCalledWith(`screenReport stub: would screen report ${reportId} (attempt 0)`);
   expect(log).toHaveBeenCalledWith(`screenReport stub: would screen report ${reportId} (attempt 1)`);
-  expect(log).toHaveBeenCalledWith(`verifyFix stub: would check fix attempt ${attemptId} (attempt 0)`);
-  expect(log).toHaveBeenCalledWith(`verifyFix stub: would check fix attempt ${attemptId} (attempt 1)`);
+  // verifyFix is no longer a stub (US22). The report here is `pending`, so the attempt is superseded.
+  expect(await t.run((ctx) => ctx.db.get(attemptId))).toMatchObject({ status: "superseded" });
 });
