@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --color-forest: #173f35;
+  --color-lime: #ddf56b;
+  --color-canvas: #f4f1e8;
+  --color-paper: #fffefa;
+  --color-ink: #18382f;
+  --color-muted: #68756f;
+  --color-border: #e3e2d8;
+}
+
+::selection {
+  color: var(--color-forest);
+  background: var(--color-lime);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-forest);
+  outline-offset: 3px;
+}

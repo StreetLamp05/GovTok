@@ -19,8 +19,8 @@ export default function LocationPicker({ initialPoint, onConfirm, onCancel }: Pr
   return (
     <main className="flex h-[calc(100dvh-4rem)] flex-col gap-3 p-4">
       <header>
-        <h1 className="text-xl font-extrabold text-[#17212B]">Choose the problem&apos;s location</h1>
-        <p className="mt-1 text-sm text-[#46505C]">Tap the map to place the pin where the problem is.</p>
+        <h1 className="text-[23px] font-semibold tracking-[-0.03em] text-[#18382F]">Choose the problem&apos;s location</h1>
+        <p className="mt-1 text-sm text-[#68756F]">Tap the map to place the pin where the problem is.</p>
       </header>
       {apiKey && mapId ? (
         <div className="min-h-0 flex-1 overflow-hidden rounded-xl">
@@ -56,7 +56,7 @@ export default function LocationPicker({ initialPoint, onConfirm, onCancel }: Pr
           selection.
         </p>
       )}
-      <p className="text-center text-xs text-[#46505C]" aria-live="polite">
+      <p className="text-center text-xs text-[#68756F]" aria-live="polite">
         Selected pin: {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
       </p>
       <div className="flex gap-3">
@@ -71,7 +71,7 @@ export default function LocationPicker({ initialPoint, onConfirm, onCancel }: Pr
           type="button"
           onClick={() => onConfirm(point)}
           disabled={!apiKey || !mapId || !hasPlacedPin}
-          className="flex-1 rounded-lg bg-[#157A47] px-4 py-3 font-semibold text-white disabled:opacity-40"
+          className="flex-1 rounded-xl bg-[#173F35] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#245446] disabled:opacity-40"
         >
           Use this pin
         </button>

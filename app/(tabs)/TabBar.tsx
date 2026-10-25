@@ -41,14 +41,16 @@ export default function TabBar() {
 
   const tab = (href: string, label: string, icon: ReactNode) => {
     const active = pathname === href;
-    const color = active ? (onFeed ? "text-white" : "text-[#157A47]") : onFeed ? "text-white/60" : "text-[#5B6878]";
+    const color = active ? (onFeed ? "text-white" : "text-[#173F35]") : onFeed ? "text-white/60" : "text-[#7A867F]";
     return (
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`flex h-14 w-16 flex-col items-center justify-center gap-[3px] text-[11px] font-bold ${color}`}
+        className={`flex h-14 w-[68px] flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors ${
+          active && !onFeed ? "bg-[#E9EDE2]" : ""
+        } ${color}`}
       >
-        <Icon>{icon}</Icon>
+        <Icon size={21}>{icon}</Icon>
         {label}
       </Link>
     );
@@ -57,8 +59,8 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className={`fixed inset-x-0 bottom-0 z-10 mx-auto flex h-16 max-w-md items-center justify-around border-t pb-[env(safe-area-inset-bottom)] ${
-        onFeed ? "border-white/10 bg-black" : "border-[#E3E8EE] bg-white"
+      className={`fixed inset-x-0 bottom-0 z-10 mx-auto flex h-[72px] max-w-md items-center justify-around border-t px-2 pb-[env(safe-area-inset-bottom)] ${
+        onFeed ? "border-white/10 bg-black" : "border-[#E5E5DB] bg-[#FBFAF5]"
       }`}
     >
       {tab("/", "Feed", ICON.feed)}
@@ -67,7 +69,7 @@ export default function TabBar() {
         href="/post"
         aria-label="Post a problem"
         aria-current={pathname === "/post" ? "page" : undefined}
-        className="flex h-9 w-[54px] items-center justify-center rounded-[10px] bg-[#157A47] text-white shadow-[-3px_0_0_#2DD4BF,3px_0_0_#F97316]"
+        className="flex size-11 items-center justify-center rounded-[15px] bg-[#173F35] text-white shadow-[0_3px_10px_rgba(23,63,53,.18)] transition-transform hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#DDF56B]"
       >
         <Icon size={22} stroke={2.8}>
           <path d="M12 5v14M5 12h14" />
