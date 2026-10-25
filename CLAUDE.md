@@ -28,6 +28,8 @@ Every generated card lands in **Backlog** or **Refinement**, never directly in *
 
 **Git is manual.** Agents never commit or push. Branches are named `<CardID>-<kebab-title>` (e.g. `US3-upload-a-video-to-convex-storage`), created with `gh issue develop` or the issue sidebar's "Create a branch" link.
 
+**Task lists are per card.** Write the plan and progress to `tasks/<CardID>-todo.md` (e.g. `tasks/US4-todo.md`), never a shared `tasks/todo.md`. This overrides the global `tasks/todo.md` rule, so parallel cards can't collide on merge.
+
 ## Definition of Ready (Refinement → Todo)
 A human confirms all of these:
 1. The `Spec §` reference is correct: the cited section actually says what the card claims.

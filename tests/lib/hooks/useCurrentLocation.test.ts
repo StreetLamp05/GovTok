@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { DEMO_POINT } from "../demo";
+import { DEMO_POINT } from "../../../lib/demo";
 
 const ERROR_CODES = { PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 };
 
@@ -19,7 +19,7 @@ function mockGeolocation(getCurrentPosition: Geolocation["getCurrentPosition"] |
 
 async function load() {
   vi.resetModules();
-  return (await import("./useCurrentLocation")).useCurrentLocation;
+  return (await import("../../../lib/hooks/useCurrentLocation")).useCurrentLocation;
 }
 
 beforeEach(() => {

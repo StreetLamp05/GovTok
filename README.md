@@ -6,7 +6,7 @@ Stack: Next.js (App Router) on Vercel, with Convex for the database, file storag
 
 ## Fresh clone
 
-Requires Node 20+ and npm.
+Requires Node 24 (pinned in `.nvmrc`) and npm. Convex's local backend runs `"use node"` actions only on Node 20, 22 or 24. If your system Node is a different version, install [nvm](https://github.com/nvm-sh/nvm) and run `nvm install 24`. `npm run dev` and `scripts/worktree-setup.sh` then switch to Node 24 on their own, through `scripts/with-node.sh`. For other Convex commands, prefix them: `scripts/with-node.sh npx convex dev --once`.
 
 ```bash
 npm install
@@ -32,6 +32,30 @@ scripts/convex-env.sh --prod    # the production deployment
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Type check |
 | `npm run build` | Production build |
+| `npm run check:bundle` | After a build: fails if a server key's name or value is anywhere in `.next/` (except `cache/`) |
+
+## Deploy (Vercel + Convex production)
+
+Every push builds on Vercel through `scripts/vercel-build.sh` (the `buildCommand` in `vercel.json`):
+
+| Push | Vercel env | What runs |
+|---|---|---|
+| `main` (the Production Branch) | `production` | `npx convex deploy --cmd 'npm run build'`: pushes Convex functions and schema to prod (authenticated by `CONVEX_DEPLOY_KEY`), then builds Next.js against it |
+| any other branch | `preview` | `npm run build` only, against prod Convex. You get an HTTPS preview URL for phone testing. |
+
+Previews read and write prod data but never push functions or schema, so parallel branches can't overwrite prod or each other. A branch's new Convex functions reach prod only when it merges, so preview pages that call them will error until then.
+
+Vercel environment variables:
+
+| Key | Production | Preview |
+|---|---|---|
+| `CONVEX_DEPLOY_KEY` | ✓ | ✗ never |
+| `NEXT_PUBLIC_CONVEX_URL` | ✗ (the build sets it) | ✓ prod Convex URL |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID` | ✓ | ✓ |
+
+Server keys go on the Convex production deployment with `scripts/convex-env.sh --prod` (from the main checkout).
+
+`/dev/camera` opens the rear camera, to check the HTTPS deploy on a phone. It ships to prod and previews, unlinked and `noindex`.
 
 ## Worktrees (parallel cards)
 

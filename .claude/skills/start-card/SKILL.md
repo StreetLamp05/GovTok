@@ -46,4 +46,4 @@ If something fails, surface it rather than silently working around it — the ca
 ## 6. Ask, then start
 
 - If acceptance criteria are ambiguous, a design decision isn't covered by the spec, or a dependency looks unmerged/incomplete, ask the user (`AskUserQuestion`) before writing code.
-- Otherwise, summarize the plan (per the global CLAUDE.md plan-mode default for non-trivial work) and begin.
+- Otherwise, summarize the plan (per the global CLAUDE.md plan-mode default for non-trivial work) in `tasks/<CardID>-todo.md` (one file per card, never a shared `tasks/todo.md`) and begin.
