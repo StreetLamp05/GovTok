@@ -449,6 +449,20 @@
       ],
       "itemId": "PVTI_lAHOBPSNSc4BolbVzhDSM3k",
       "fieldsSet": true
+    },
+    "US29": {
+      "specSection": "Scope (submission); US4 and US7 ACs",
+      "issueNumber": 46,
+      "issueId": 6021111098,
+      "url": "https://github.com/StreetLamp05/GovTok/issues/46",
+      "title": "US29: Remove the dev check pages before submission",
+      "parentLinked": true,
+      "blockedByLinked": [
+        "US4",
+        "US7"
+      ],
+      "itemId": "PVTI_lAHOBPSNSc4BolbVzhDUPXQ",
+      "fieldsSet": true
     }
   }
 }

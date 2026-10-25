@@ -282,6 +282,9 @@ Updated incrementally as decisions are locked in.
 - The poster stays on "Checking…" until the verdict arrives, so the emergency screen shows within seconds.
 - **Where the poster sees the result:** live on the "Checking…" screen, and afterwards on their private Me page (§5.4.1).
 - **Precedence** when several verdicts apply: `emergency` > `retake` > `reject` > `mute` > `pass`.
+  - Exception (2026-10-25, US12): a post with no public-space problem at all (a selfie, off-topic content) is `reject` even when a face or plate is visible, because a retake makes no sense when there's nothing to film. `emergency` still wins.
+  - `mute` "addresses" (2026-10-25, US12) means an address tied to a person: where someone lives or works ("John lives at 412 Elm St"). The address or street of the problem itself isn't private, since the location is public anyway (§7.1.1).
+  - `reject` needs neither the frames nor the transcript/description to show a problem. A problem that's hard to see in about 6 frames but clearly described (a dark streetlight at dusk, a gas smell) isn't rejected, since held posts are purged after 7 days (§7.1.1).
 - **Failure:** if Groq or Claude errors, retry once, then `held` with reason "screening failed."
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
 - **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
@@ -418,6 +421,7 @@ Updated incrementally as decisions are locked in.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
   - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
+    - (2026-10-25) Age runs from the newest file upload, so a retake (§4.2.1) restarts the 7 days. Samples (§6.1.1) are never purged, because their `createdAt` is backdated.
   - Published reports (`open` / `fixed`) are kept indefinitely; the public record is the point.
 - Rejected:
   - Blurring locations to street level: breaks fixer navigation and the 50 m checks.
@@ -469,7 +473,7 @@ Updated incrementally as decisions are locked in.
 - ~~3.1.2 Fixer access (who can close a report)~~ ✓ *(passcode per fixer)*
 
 **4.1 Posting**
-- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s, video only)*
+- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s; posts are a video or a photo slideshow, fixes video only)*
 - ~~4.1.2 Duplicate check when posting~~ ✓ *(location pre-check, 50 m)*
 
 **4.2 Screening**

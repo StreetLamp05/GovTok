@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as feed from "../feed.js";
+import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as fixVerification from "../fixVerification.js";
 import type * as fixVerificationDb from "../fixVerificationDb.js";
@@ -18,6 +20,7 @@ import type * as lib_publicReport from "../lib/publicReport.js";
 import type * as lib_routing from "../lib/routing.js";
 import type * as lib_screening from "../lib/screening.js";
 import type * as placeholder from "../placeholder.js";
+import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
 
@@ -28,6 +31,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  feed: typeof feed;
+  crons: typeof crons;
   files: typeof files;
   fixVerification: typeof fixVerification;
   fixVerificationDb: typeof fixVerificationDb;
@@ -38,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "lib/routing": typeof lib_routing;
   "lib/screening": typeof lib_screening;
   placeholder: typeof placeholder;
+  purge: typeof purge;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
 }>;
