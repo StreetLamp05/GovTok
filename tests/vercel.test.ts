@@ -22,16 +22,23 @@ function build(env: Record<string, string>) {
   return { status: result.status, stderr: result.stderr, calls };
 }
 
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "vercel-build-"));
+  mkdirSync(join(root, "scripts"));
+  mkdirSync(join(root, "bin"));
+  copyFileSync(SCRIPT, join(root, "scripts/vercel-build.sh"));
+  for (const bin of ["npx", "npm"]) {
+    writeFileSync(join(root, "bin", bin), `#!/bin/sh\necho "${bin} $*" >> "${join(root, "calls")}"\n`);
+    chmodSync(join(root, "bin", bin), 0o755);
+  }
+});
+
+afterEach(() => rmSync(root, { recursive: true, force: true }));
+
 // Without it, a project whose preset is "Other" looks for a `public` output directory and fails.
 test("Vercel builds it as a Next.js app", () => {
   expect(config.framework).toBe("nextjs");
 });
-
-test("the build deploys Convex, then builds Next.js against it", () => {
-  expect(config.buildCommand).toBe("npx convex deploy --cmd 'npm run build'");
-});
-
-afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 test("vercel.json builds every push through the build script", () => {
   expect(config.buildCommand).toBe("scripts/vercel-build.sh");
