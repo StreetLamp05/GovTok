@@ -417,6 +417,7 @@ Updated incrementally as decisions are locked in.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
   - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
+    - (2026-10-25) Age runs from the newest file upload, so a retake (§4.2.1) restarts the 7 days. Samples (§6.1.1) are never purged, because their `createdAt` is backdated.
   - Published reports (`open` / `fixed`) are kept indefinitely; the public record is the point.
 - Rejected:
   - Blurring locations to street level: breaks fixer navigation and the 50 m checks.
