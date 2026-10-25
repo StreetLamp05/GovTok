@@ -5,7 +5,8 @@ Updated incrementally as decisions are locked in.
 ## Session state / handoff
 *Update after every locked decision so a fresh session can resume from this block alone.*
 - **Status:** ✅ **SPEC COMPLETE (Level 2, 2026-10-24).** Every item for tonight's build is decided, and the consistency sweep is resolved. No forward references are open. One known gap (2026-10-25): slurs aren't yet in US12's title rule (§4.2.1).
-- **Last completed:** retcons for text descriptions, photo slideshow posts and the private Me page (§4.1.1, §5.4.1)
+- **Last completed:** retcons for text descriptions, photo slideshow posts and the private Me page (§4.1.1, §5.4.1). Build decisions from US25 are recorded in §6.1.1, §6.2.1 and §8 (2026-10-25).
+- **City switch (2026-10-25, US25, user decision):** the Cal Hacks demo runs as **San Francisco**, live at the Palace of Fine Arts. This reverses §6.1.1's rejected "Bay Area as a second city". `ACTIVE_CITY` in `convex/lib/city.ts` sets the routing (§2.1.2), the Claude prompts, the map, `DEMO_POINT` and the seed presets. Oct 30 flips it back to Mableton. See §6.1.1 "City profile".
 - **Next up:** build. The M0 cards are in `.planning/M0-issues.json` (28 stories, reviewed), waiting for the user to push them to Project #16. Branches are tested on a laptop; phone checks happen after merge on prod.
 - **Moved to server (2026-10-24):** work continues on `miraii` at `~/projects/GovTok` (moved from `~/GovTok` 2026-10-24; symlink left behind), using `claude --remote-control` inside tmux. The original conversation was on the laptop; this doc plus memory is the only carried-over context.
 - **Context the doc doesn't hold:**
@@ -193,6 +194,7 @@ Updated incrementally as decisions are locked in.
 - Rationale: the "who's responsible" label is the core of the story, and a wrong label recreates the confusion GovTok exists to fix. A fixed table is predictable, auditable and easy to correct. The road and stormwater rows follow Scope (they stay with Cobb through 2034). Sanitation and code enforcement moved to the city in 2025.
 - Rejected: Claude assigning the owner freely. It's flexible, but it will sometimes be confidently wrong.
 - ⚠️ **Verify when the product is near finished:** the whole table, especially streetlights (assumed Georgia Power) and water mains (assumed Cobb Water System). Ask the Mableton teammate, or check city and county sites. Tracked in §8 under "Before ship."
+- **San Francisco table (2026-10-25, US25, Cal Hacks only, see §6.1.1 "City profile"):** pothole and code_violation → city / SF Public Works, signal_sign → city / SFMTA, drainage → city / SFPUC (sewer & stormwater), water_leak → city / SFPUC Water, streetlight → utility / PG&E / SFPUC Streetlights ⚠️, trash_missed → utility / Recology, other → unknown. SF is a combined city and county, so no category uses the `cobb` owner value. The stored owner values are unchanged, and only the chip labels differ ("City of SF").
 
 **2.1.3 Status lifecycle — pending → open | held; open → fixed**
 - `status` is one of `pending | held | open | fixed`.
@@ -400,22 +402,41 @@ Updated incrementally as decisions are locked in.
 ### 6.1 Demo
 
 **6.1.1 California sample videos — Sample badge + demo location mode**
-- Seeded reports have `isSample: true`, are placed at plausible Mableton coordinates, and show a **"Sample · filmed in California"** badge on the card.
-- `?demo=mableton` swaps the phone's GPS for a fixed Mableton point next to the seeds and shows a **"Demo mode: location simulated"** banner. Posting (§4.1.1), the duplicate check (§4.1.2) and the fix geofence (§4.3.1) all use that point.
+- Seeded reports have `isSample: true`, are placed at plausible coordinates in the active city, and show a **"Sample · filmed in California"** badge on the card.
+- `?demo=<city id>` swaps the phone's GPS for a fixed point next to the seeds and shows a **"Demo mode: location simulated"** banner. Posting (§4.1.1), the duplicate check (§4.1.2) and the fix geofence (§4.3.1) all use that point.
+- **City profile** (2026-10-25, US25, user decision; supersedes the Mableton placement for Cal Hacks):
+  - Everything runs in San Francisco, where the team and the samples are, and the demo is live at the Palace of Fine Arts.
+  - `ACTIVE_CITY` (`convex/lib/city.ts`) is `SAN_FRANCISCO`. It sets the routing table (§2.1.2), "residents of San Francisco, California" in both Claude prompts, the map's default center (Civic Center) and title, and the seed presets (SF street corners).
+  - `DEMO_POINT` is on Baker St beside the Palace lagoon, with `?demo=sf`. The pothole preset is 28 m from it and the before/after spot 39 m.
+  - Oct 30 sets `ACTIVE_CITY = MABLETON`, which restores the Mableton table, prompts and center, Clay Rd SW as `DEMO_POINT`, and `?demo=mableton`.
+  - Stage consequence: nearly every SF category is city-owned, so neighbors can't confirm fixes (§4.3.2, unchanged), and the live before/after is filmed by a fixer through `/fix` ("Fixed by SF Public Works").
+  - Pitch: GovTok is built for Mableton (Scope), and the Cal Hacks demo shows it running for San Francisco.
 - Stage flow:
   1. Walk up to a seeded pothole: "Is it one of these?" → Me too.
   2. Post a new clip live.
   3. Play a pre-filmed before/after pair of the same California spot. Claude verifies it, and the reveal plays (§5.1.1).
 - Needs before/after pairs filmed at the same spot, so Claude's same-spot check passes honestly.
-- **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), then sets `isSample: true`. Claude really did screen the seeds.
+- **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), so Claude really did screen the seeds.
+  - Build details (2026-10-25, US25):
+    - `/admin/seed` calls `convex/seed.ts`, which checks `ADMIN_PASSCODE` on every call. The raw passcode is sent each time, with no session token and no limit on guesses (see §8).
+    - A sample is inserted with `isSample: true` from the start, not after screening. That way going public skips the feed bump (§5.1.2) and the purge skips it (§7.1.1).
+    - One batch's screenings run 10 s apart.
+    - Seeded video clips must be MP4 or WebM, because transcription can't read QuickTime.
+    - A sample's fix clip is filed as a fix attempt only once its report is `open`. If the report is held, the clip is dropped.
+    - That attempt uses the report's own location, so the 50 m fix check (§4.3.1) is skipped on purpose. The real `verifyFix` still checks it.
+    - A neighbor fix gets a throwaway resident and follows §4.3.2 (never on city-owned reports).
+    - A backdated `fixedAt` is applied after the fix is verified. `lastActivityAt` becomes the later of the seeded value and `fixedAt`.
+    - In each city profile, the open-pothole preset is nearer `DEMO_POINT` than the before/after spot, so the duplicate check offers the pothole first.
 - **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "Open · today". This is acceptable only because the Sample badge labels them.
   - Under one day, feed cards read "Open · today" / "Fixed same day", following the mockup (2026-10-25, US17). The fixer screens still say "0 days".
 - **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
-- **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
-- Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
+  - Which samples (2026-10-25, US25): the phone owns the before/after spot, so the Me-page beat is the fix Claude just verified on stage. It also owns one pre-fixed, backdated sample, as the fallback if the live check fails.
+- **Fix clip audio** (2026-10-25, US25): the player always mutes fix clips, but an uploaded file keeps its audio track in storage. For the demo, the runbook converts every after clip without audio (`ffmpeg -an`), so it's silent at the source as §4.3.1 requires. Uploads by anyone else are deferred (§8).
+- **Demo-mode upload** (sweep, 2026-10-24): in demo mode, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
+- Rationale (2026-10-24, before the city profile): the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
 - Rejected:
   - Samples at their real California locations: Berkeley potholes routed to "Cobb DOT."
-  - The Bay Area as a second city: a second routing table, and it weakens the "named community" pitch.
+  - The Bay Area as a second city: a second routing table, and it weakens the "named community" pitch. *(Reversed for Cal Hacks on 2026-10-25: see "City profile" above.)*
 - 📌 Deferred (§8): replace the samples with the Mableton teammate's real footage and turn demo mode off for Oct 30.
 
 ### 6.2 Impact
@@ -430,6 +451,7 @@ Updated incrementally as decisions are locked in.
     - *(Clarified 2026-10-25, US19:)* once per report per browser session (sessionStorage), counted from the feed only. Me-page reveals (§5.4.1) count only if US24 opts in.
   - **Me-toos as a share of (reports + me-toos):** a proxy for duplicate calls avoided. *(Denominator clarified 2026-10-25, US26.)*
 - **For Cal Hacks:** there's no real data yet, so the pitch shows the plan plus the live counters from the demo. One stats query; no dashboard screen.
+  - (2026-10-25, US25) The counters include the seeded samples. Their dates are backdated by hand, so the slide labels them "from the demo (sample data)", the same way the Sample badge labels the cards. Oct 30 runs `excludeSamples` (US26).
 - Rationale: the premise is that visible fixes build trust (Scope), so the headline measures trust, and the counters show the mechanism (fixes happen, and people see them). It answers the Anthropic track's impact plan and Microsoft's "measurable usefulness."
 - Rejected: an in-app trust question shown on first visit and after a week. More responses, but a new screen and timing logic. 📌 Deferred (§8).
 
@@ -469,7 +491,8 @@ Updated incrementally as decisions are locked in.
 - Onboarding real fixers (city staff, contractors) with the city
 - Mableton test-week logistics
 - In-app trust question shown on first visit and after a week (§6.2.1)
-- Replace the California samples with real Mableton footage, and turn `?demo=mableton` off (§6.1.1)
+- Replace the California samples with real Mableton footage, set `ACTIVE_CITY = MABLETON`, and turn demo mode off (§6.1.1)
+- Verify the San Francisco routing rows if the SF profile is kept after Cal Hacks, especially streetlights (SFPUC vs PG&E) and code enforcement (Public Works vs Building Inspection) (§2.1.2)
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
 - A limit on fixer passcode guesses (§3.1.2)
@@ -479,7 +502,10 @@ Updated incrementally as decisions are locked in.
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
 - Audio in clips for the Mableton pilot (privacy of narration and bystander voices; consider silent clips plus a text note)
 - Reports stuck in `pending` (2026-10-25, US13; manual for M0 via `rescreen`, §4.2.1): if Groq or Claude hangs until the action times out, no retry is scheduled, and the purge only removes `held` reports. Options: request timeouts in `transcribe` / `callClaudeJSON`, or a cron that holds stale `pending` reports as "screening failed"
-- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11
+- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11. The seed page refuses them up front (US25).
+- Audio in uploaded fix clips (2026-10-25, US25): a demo-mode upload keeps the file's audio track in storage. Only playback is muted, so the file is reachable with sound at its storage URL. For M0, the runbook strips audio from the after clips. Options: re-encode without audio in the browser, or strip it server-side (like the `mute` item above).
+- Seed admin gate (2026-10-25, US25): `/admin/seed` sends the raw `ADMIN_PASSCODE` with every call and has no limit on guesses. Options: the 30-minute session token `videoIntakeAuth.login` already issues, plus a limit on guesses.
+- A seeded fix clip is dropped when its sample is held at that moment (2026-10-25, US25). Recovery is re-seeding the sample. Option: an admin "attach fix" action on an existing sample.
 
 ---
 

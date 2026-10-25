@@ -4,6 +4,7 @@ import { MarkerClusterer, type Marker } from "@googlemaps/markerclusterer";
 import { AdvancedMarker, APIProvider, Map as GoogleMap, useMap } from "@vis.gl/react-google-maps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MapReport } from "../../convex/map";
+import { ACTIVE_CITY } from "../../convex/lib/city";
 import { DEMO_POINT, type LatLng } from "../../lib/demo";
 import { useCurrentLocation } from "../../lib/hooks/useCurrentLocation";
 import { useDemoMode } from "../../lib/hooks/useDemoMode";
@@ -11,11 +12,9 @@ import { bubbleStyle } from "./bubble";
 import { reportClusterRenderer } from "./clusterRenderer";
 import { markerCount, STATUS_COLOR } from "./counts";
 
-// Google Maps with clustered report markers (§1.1.2, §5.2.1). Centered on Mableton, or on
-// DEMO_POINT in demo mode (§6.1.1). Kept separate from DEMO_POINT, which may move next
-// to the seeded samples.
-// Mableton's published center point, 33°48′57″N 84°34′57″W.
-export const MABLETON_CENTER: LatLng = { lat: 33.8158, lng: -84.5825 };
+// Google Maps with clustered report markers (§1.1.2, §5.2.1). Centered on the active city
+// (convex/lib/city.ts), or on DEMO_POINT in demo mode (§6.1.1), which sits by the seeds.
+export const CITY_CENTER: LatLng = ACTIVE_CITY.center;
 const CITY_ZOOM = 13;
 // Past the clusterer's max zoom (16), so a focused report always shows on its own.
 const FOCUS_ZOOM = 17;
@@ -28,7 +27,7 @@ type Props = {
 };
 
 export default function ReportsMap(props: Props) {
-  const home = useDemoMode() ? DEMO_POINT : MABLETON_CENTER;
+  const home = useDemoMode() ? DEMO_POINT : CITY_CENTER;
   // Read here, not at module load, so Next inlines them and tests can stub them.
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
   // Advanced Markers need a Map ID.

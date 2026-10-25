@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { PublicReport } from "../../../convex/lib/publicReport";
-import { DEMO_POINT } from "../../../lib/demo";
+import { DEMO_POINT, DEMO_VALUE } from "../../../lib/demo";
 
 const DAY_MS = 86_400_000;
 // ~111 m per 0.001° of latitude.
@@ -79,7 +79,7 @@ describe("FixerList", () => {
   test("in demo mode, lists reports nearest to DEMO_POINT first, with distance and details", async () => {
     const getCurrentPosition = vi.fn();
     Object.defineProperty(navigator, "geolocation", { configurable: true, value: { getCurrentPosition } });
-    window.history.replaceState(null, "", "/fix?demo=mableton");
+    window.history.replaceState(null, "", `/fix?demo=${DEMO_VALUE}`);
     const { default: FixerList } = await load();
 
     render(<FixerList reports={REPORTS} />);
