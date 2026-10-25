@@ -387,7 +387,8 @@ Updated incrementally as decisions are locked in.
   3. Play a pre-filmed before/after pair of the same California spot. Claude verifies it, and the reveal plays (§5.1.1).
 - Needs before/after pairs filmed at the same spot, so Claude's same-spot check passes honestly.
 - **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), then sets `isSample: true`. Claude really did screen the seeds.
-- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "0 days". This is acceptable only because the Sample badge labels them.
+- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "Open · today". This is acceptable only because the Sample badge labels them.
+  - Under one day, feed cards read "Open · today" / "Fixed same day", following the mockup (2026-10-25, US17). The fixer screens still say "0 days".
 - **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
 - **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
 - Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
