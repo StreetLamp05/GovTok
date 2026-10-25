@@ -23,6 +23,7 @@ import type * as lib_screenPrompt from "../lib/screenPrompt.js";
 import type * as lib_screening from "../lib/screening.js";
 import type * as lib_transcribe from "../lib/transcribe.js";
 import type * as lib_videoIntakeValidation from "../lib/videoIntakeValidation.js";
+import type * as map from "../map.js";
 import type * as placeholder from "../placeholder.js";
 import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "lib/screening": typeof lib_screening;
   "lib/transcribe": typeof lib_transcribe;
   "lib/videoIntakeValidation": typeof lib_videoIntakeValidation;
+  map: typeof map;
   placeholder: typeof placeholder;
   purge: typeof purge;
   screening: typeof screening;

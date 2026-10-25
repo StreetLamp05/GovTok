@@ -1,8 +1,11 @@
-// Map stub (US6). The map card replaces it.
+import { Suspense } from "react";
+import MapScreen from "@/components/map/MapScreen";
+
+// MapScreen reads ?report=<id> with useSearchParams, which needs a Suspense boundary.
 export default function MapPage() {
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-extrabold">Map</h1>
-    </main>
+    <Suspense>
+      <MapScreen />
+    </Suspense>
   );
 }
