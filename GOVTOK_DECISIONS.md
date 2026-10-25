@@ -104,6 +104,7 @@ Updated incrementally as decisions are locked in.
 **1.1.2 Map library — Google Maps**
 - Google Maps JavaScript API, wrapped with `@vis.gl/react-google-maps`. Clustering comes from `@googlemaps/markerclusterer`.
 - Street names for cards come from reverse geocoding (Geocoding API) on the same key. Run it once per report in a Convex action and store the result.
+  - (2026-10-25, US13) The street is the `route` component's short name ("Floyd Rd"), never a house number, because it's public (§7.1.1). A retry or rescreen reuses a stored street. If geocoding fails, the report has no street and screening carries on.
 - Setup: a Google Cloud billing account with a card on file. One browser key restricted to the Vercel domain and localhost. Reverse geocoding runs server-side with a second key restricted by API.
 - Rationale: a nod to Google at the Oct 30 event, a polished look on phones, and one account for both the map and the address.
 - Rejected:
@@ -293,6 +294,10 @@ Updated incrementally as decisions are locked in.
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
 - **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
 - `held` → `open` only by hand, in the Convex dashboard. No moderation UI (§8).
+  - (2026-10-25, US13) The operator tools are `npx convex run screeningDb:release` and `screeningDb:rescreen`.
+    - `release` refuses a report with no category or title (rescreen it instead). A `retake`, `emergency` or `reject` report also needs `"force": true`, because precedence means its audio and text were never checked for `mute`. Releasing bumps `lastActivityAt` (§5.1.2).
+    - `rescreen` re-runs screening on a `held` report, or on a `pending` one whose screening died (an action that crashes never retries). That's an operator-only exception to §2.1.3. A duplicate run is safe, because a result only lands while the report is still `pending` with the same media.
+  - (2026-10-25, US13) "Screening failed" also clears the earlier result (category, title, owner, agency, mute), so a report retaken after a verdict can't be released with the old verdict's fields.
 - No blurring: Claude can't give per-frame boxes for a whole video, and re-encoding is too heavy for tonight.
 - The mute is a playback flag only. The stored file keeps its audio. 📌 Deferred (§8): strip audio server-side for the pilot.
 - **Titles never repeat what a `mute` hides** (locked 2026-10-25, found in the US20 review): Claude writes the public `title` from the same transcript and description that a `mute` hides, so the screening prompt keeps titles free of anything that would trigger `mute`. Titles show on feed cards and as map marker tooltips. US12's title rule already bans names, addresses, house numbers, plates, phone numbers and the street. **Open gap:** slurs aren't in that rule yet.
@@ -357,6 +362,7 @@ Updated incrementally as decisions are locked in.
 
 **5.1.2 Feed order — most recent activity first**
 - Sort by `lastActivityAt`, descending. It's set at creation and bumped by each me-too and by the fix (§2.1.1). One Convex index.
+  - (2026-10-25, US13) It's also bumped when a report goes public (screening passes, or a held report is released), so a fresh post tops the feed. Samples are never bumped this way, so they keep their backdated order (§6.1.1).
 - Only `open` and `fixed` reports appear (§2.1.3). No personalization (Scope non-goal).
 - Rationale: a fresh fix jumps to the top, so reveals get seen (§5.1.1), and problems piling up me-toos rise.
 - Build-plan default (2026-10-24): the order is snapshotted when the feed mounts. Counts update live, but cards don't reorder under the user's finger; reopening the feed re-sorts it.
@@ -472,6 +478,8 @@ Updated incrementally as decisions are locked in.
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
 - Audio in clips for the Mableton pilot (privacy of narration and bystander voices; consider silent clips plus a text note)
+- Reports stuck in `pending` (2026-10-25, US13; manual for M0 via `rescreen`, §4.2.1): if Groq or Claude hangs until the action times out, no retry is scheduled, and the purge only removes `held` reports. Options: request timeouts in `transcribe` / `callClaudeJSON`, or a cron that holds stale `pending` reports as "screening failed"
+- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11
 
 ---
 
