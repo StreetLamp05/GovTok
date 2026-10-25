@@ -37,6 +37,7 @@ import type * as nearby from "../nearby.js";
 import type * as placeholder from "../placeholder.js";
 import type * as posts from "../posts.js";
 import type * as purge from "../purge.js";
+import type * as relation from "../relation.js";
 import type * as retake from "../retake.js";
 import type * as reveal from "../reveal.js";
 import type * as screening from "../screening.js";
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   placeholder: typeof placeholder;
   posts: typeof posts;
   purge: typeof purge;
+  relation: typeof relation;
   retake: typeof retake;
   reveal: typeof reveal;
   screening: typeof screening;
