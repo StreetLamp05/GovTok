@@ -170,7 +170,7 @@ export default function PostFlow() {
       return (
         <main className="flex flex-col gap-4 p-6" aria-busy="true">
           <h1 className="text-2xl font-extrabold">Post a problem</h1>
-          <p className="text-[#4A5A6E]">Checking for nearby reports…</p>
+          <p className="text-[#68756F]">Checking for nearby reports…</p>
         </main>
       );
     }
@@ -224,7 +224,7 @@ export default function PostFlow() {
       )}
       <label className="flex flex-col gap-1">
         <span className="font-semibold">
-          Description <span className="font-normal text-[#4A5A6E]">(optional)</span>
+          Description <span className="font-normal text-[#68756F]">(optional)</span>
         </span>
         <textarea
           value={description}
@@ -234,9 +234,9 @@ export default function PostFlow() {
           disabled={submitting}
           placeholder="What's wrong, and how long has it been like this?"
           aria-describedby="description-count"
-          className="rounded-lg border border-[#C9D3DE] p-3"
+          className="rounded-xl border border-[#D8DDD2] bg-[#FFFEFA] p-3 focus-visible:outline-[#173F35]"
         />
-        <span id="description-count" aria-live="polite" className="self-end text-sm text-[#4A5A6E] tabular-nums">
+        <span id="description-count" aria-live="polite" className="self-end text-sm text-[#68756F] tabular-nums">
           {description.length}/{MAX_DESCRIPTION_LENGTH}
         </span>
       </label>
@@ -256,7 +256,7 @@ export default function PostFlow() {
         <button
           onClick={submit}
           disabled={submitting || !point}
-          className="flex-1 rounded-lg bg-[#157A47] px-4 py-3 font-semibold text-white disabled:opacity-40"
+          className="flex-1 rounded-xl bg-[#173F35] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#245446] disabled:opacity-40"
         >
           {submitting ? "Sending…" : "Submit"}
         </button>
@@ -280,20 +280,20 @@ function LocationGate({
       <h1 className="text-2xl font-extrabold">Post a problem</h1>
       {location.status === "ready" ? (
         <>
-          <p className="text-sm text-[#46505C]">
+          <p className="text-sm text-[#68756F]">
             Using your {location.simulated ? "simulated demo location" : "current location"}:{" "}
             {location.point.lat.toFixed(5)}, {location.point.lng.toFixed(5)}
           </p>
           <button
             type="button"
             onClick={onUseCurrent}
-            className="rounded-lg bg-[#157A47] px-4 py-3 font-semibold text-white"
+            className="rounded-xl bg-[#173F35] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#245446]"
           >
             Use this location
           </button>
         </>
       ) : (
-        <div role="status" className="rounded-lg border border-[#E2E6EA] bg-white p-4 text-sm text-[#46505C]">
+        <div role="status" className="rounded-2xl border border-[#E7E6DE] bg-[#FFFEFA] p-4 text-sm text-[#68756F]">
           {location.status === "loading"
             ? "Finding your location… You can also choose a pin on the map."
             : `Can't use GPS (${location.status === "denied" ? "permission denied" : "location unavailable"}). Choose a pin on the map instead.`}
@@ -309,7 +309,7 @@ function LocationGate({
       <button
         type="button"
         onClick={onChooseMap}
-        className="rounded-lg border border-[#157A47] px-4 py-3 font-semibold text-[#157A47]"
+        className="rounded-xl border border-[#BFC9B7] bg-[#FFFEFA] px-4 py-3 font-semibold text-[#245446] transition-colors hover:bg-[#F1F3E9]"
       >
         Choose location on map
       </button>

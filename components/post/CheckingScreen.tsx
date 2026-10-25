@@ -24,8 +24,8 @@ import { uploadFile } from "@/lib/upload";
 const SEND_ERROR = "We couldn't send your post. Check your connection and try again.";
 const RETRY_ERROR = "We couldn't start the check again. Check your connection and try again.";
 
-const primary = "rounded-lg bg-[#157A47] px-4 py-3 font-semibold text-white disabled:opacity-40";
-const secondary = "rounded-lg border px-4 py-3 font-semibold disabled:opacity-40";
+const primary = "rounded-xl bg-[#173F35] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#245446] disabled:opacity-40";
+const secondary = "rounded-xl border border-[#D8DDD2] bg-[#FFFEFA] px-4 py-3 font-semibold disabled:opacity-40";
 
 export default function CheckingScreen({
   reportId,
@@ -56,7 +56,7 @@ export default function CheckingScreen({
   if (report === undefined || report.status === "pending") {
     return (
       <Page busy>
-        <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#C9D3DE] border-t-[#157A47]" />
+        <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#D8DDD2] border-t-[#173F35]" />
         <h1 className="text-2xl font-extrabold">Checking…</h1>
         <p className="text-[#4A5A6E]">We&apos;re checking your post before it goes live. This takes a few seconds.</p>
       </Page>

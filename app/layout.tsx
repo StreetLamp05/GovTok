@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-[#F4F6F8] font-sans text-[#0F1E33] antialiased">
+      <body className="bg-[#F4F1E8] font-sans text-[#18382F] antialiased">
         <ConvexClientProvider>
           <SoundProvider>
             <DemoBanner />

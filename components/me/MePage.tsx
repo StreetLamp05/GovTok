@@ -10,36 +10,76 @@ import MeReportCard from "./MeReportCard";
 
 type FollowedReport = { createdAt: number; report: PublicReport };
 
-export default function MePage() {
+export default function MePageContent() {
   const router = useRouter();
   const token = useResidentToken();
   const reports = useQuery(api.me.myReports, token ? { token } : "skip");
   const meToos = useQuery(api.me.myMeToos, token ? { token } : "skip");
   const [now] = useState(() => Date.now());
+  const resolved = [...(reports ?? []), ...(meToos ?? []).map(({ report }) => report)].filter(
+    (report) => report.status === "fixed",
+  ).length;
 
   return (
-    <main className="flex flex-col gap-8 p-5">
-      <header>
-        <h1 className="text-2xl font-extrabold text-[#17212B]">Me</h1>
-        <p className="mt-1 text-sm text-[#46505C]">Your posts and the problems you follow are private to this device.</p>
+    <main className="min-h-dvh bg-[#F4F1E8] pb-24">
+      <header className="relative overflow-hidden rounded-b-[30px] bg-[#173F35] px-6 pb-8 pt-9 text-center text-white">
+        <div aria-hidden="true" className="absolute -right-14 -top-16 size-48 rounded-full bg-white/[0.035]" />
+        <div className="relative mx-auto flex size-[84px] items-center justify-center rounded-full bg-[#DDF56B] text-[#173F35]">
+          <ProfileIcon />
+        </div>
+        <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">Your neighborhood</p>
+        <h1 className="mt-1 text-[25px] font-semibold tracking-[-0.035em]">Your profile</h1>
+        <p className="mt-2 text-sm text-white/75">Helping make the neighborhood better.</p>
+        <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/75">
+          <LockIcon />
+          Private to this device
+        </p>
       </header>
+
+      <section aria-label="Your impact" className="grid grid-cols-3 border-b border-[#E3E2D8] bg-[#F8F6EF] px-2 py-6">
+        <Stat label="Reports" value={reports?.length} />
+        <Stat label="Me-toos" value={meToos?.length} divider />
+        <Stat label="Resolved" value={resolved} divider />
+      </section>
+
       {(!token || reports === undefined || meToos === undefined) && (
-        <p role="status" className="text-sm text-[#46505C]">Loading your reports…</p>
+        <p role="status" className="px-5 pt-6 text-sm text-[#68756F]">
+          Loading your activity…
+        </p>
       )}
       {token && reports !== undefined && meToos !== undefined && (
-        <>
+        <div className="space-y-8 px-4 pt-7">
           <ReportSection
-            title="My posts"
-            empty="You haven't posted a problem yet."
+            title="Your requests"
+            empty="Your first report starts here. Share a neighborhood issue and follow its progress here."
             reports={reports}
             now={now}
             token={token}
             onPostAnother={() => router.push("/post")}
           />
           <MeTooSection reports={meToos} now={now} />
-        </>
+        </div>
       )}
     </main>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  divider = false,
+}: {
+  label: string;
+  value: number | undefined;
+  divider?: boolean;
+}) {
+  return (
+    <div className={`px-1 text-center ${divider ? "border-l border-[#E3E2D8]" : ""}`}>
+      <p className="text-[29px] font-semibold leading-none tracking-[-0.04em] text-[#173F35] tabular-nums">
+        {value ?? <span className="inline-block h-7 w-7 animate-pulse rounded bg-[#E5E4DA] align-middle" />}
+      </p>
+      <p className="mt-2.5 text-xs font-medium text-[#68756F]">{label}</p>
+    </div>
   );
 }
 
@@ -60,9 +100,18 @@ function ReportSection({
 }) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-3 text-lg font-extrabold text-[#17212B]">{title}</h2>
+      <SectionHeading title={title} count={reports.length} />
       {reports.length === 0 ? (
-        <p className="rounded-xl bg-white p-4 text-sm text-[#46505C]">{empty}</p>
+        <div className="rounded-[18px] border border-dashed border-[#D5D9CF] bg-[#F8F6EF] px-5 py-6 text-center">
+          <p className="mx-auto max-w-xs text-sm leading-relaxed text-[#6C7872]">{empty}</p>
+          <button
+            type="button"
+            onClick={onPostAnother}
+            className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-[#173F35] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#245446]"
+          >
+            Post a problem
+          </button>
+        </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {reports.map((report) => (
@@ -78,10 +127,12 @@ function ReportSection({
 
 function MeTooSection({ reports, now }: { reports: FollowedReport[]; now: number }) {
   return (
-    <section aria-label="My me-toos">
-      <h2 className="mb-3 text-lg font-extrabold text-[#17212B]">My me-toos</h2>
+    <section aria-label="Problems you supported">
+      <SectionHeading title="Problems you supported" count={reports.length} />
       {reports.length === 0 ? (
-        <p className="rounded-xl bg-white p-4 text-sm text-[#46505C]">You haven&apos;t followed a problem yet.</p>
+        <p className="rounded-[18px] border border-dashed border-[#D5D9CF] bg-[#F8F6EF] p-5 text-sm text-[#6C7872]">
+          When you join an open report, it will show up here.
+        </p>
       ) : (
         <ul className="flex flex-col gap-3">
           {reports.map(({ report }) => (
@@ -92,5 +143,32 @@ function MeTooSection({ reports, now }: { reports: FollowedReport[]; now: number
         </ul>
       )}
     </section>
+  );
+}
+
+function SectionHeading({ title, count }: { title: string; count: number }) {
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-3">
+      <h2 className="text-[18px] font-semibold tracking-[-0.025em] text-[#18382F]">{title}</h2>
+      <span className="text-xs font-medium text-[#77837D]">{count}</span>
+    </div>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c.7-3.3 3.1-5 7-5s6.3 1.7 7 5" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
   );
 }

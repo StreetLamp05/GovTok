@@ -7,6 +7,7 @@ import { HoldDebug, Retake, ScreeningFailed } from "@/components/post/CheckingSc
 import RevealPlayer from "@/components/RevealPlayer";
 import type { OwnerReport, PublicReport } from "@/convex/lib/publicReport";
 import { SCREENING_FAILED_REASON } from "@/convex/lib/screening";
+import { daysLabel, daysOpen } from "@/lib/days";
 
 type Props = {
   report: OwnerReport | PublicReport;
@@ -25,7 +26,6 @@ export function reportStatusText(report: OwnerReport | PublicReport, now: number
     if (report.reason === SCREENING_FAILED_REASON) return "Screening failed";
     return "Not posted";
   }
-  // Same chip as the feed ("Open · today", "Fixed same day"), so it matches the reveal stamp.
   return statusText({ status: report.status, createdAt: report.createdAt, fixedAt: report.fixedAt }, now);
 }
 
@@ -34,76 +34,133 @@ export default function MeReportCard({ report, now, token = null, isMeToo = fals
   const held = report.status === "held" ? report : null;
   const publicReport = report.status === "open" || fixed;
   const status = reportStatusText(report, now);
-  const reason = held?.reason;
-  // Fixed items play the before/after reveal (US19) on a tap (§5.4.1).
   const [playing, setPlaying] = useState(false);
+  const href = `/?report=${report._id}`;
+  const thumbnail = report.frameUrls[0];
+  const activityAt = fixed && report.fixedAt !== undefined ? report.fixedAt : report.createdAt;
+  const activityAge = daysOpen(activityAt, now);
+  const activityLabel = fixed ? "Resolved" : "Posted";
 
   return (
     <article
       aria-label={report.title ?? "Your report"}
       data-status={report.status}
-      className={`rounded-2xl border bg-white p-4 shadow-sm ${
-        fixed ? "border-[#157A47] ring-2 ring-[#157A47]/20" : "border-[#E2E6EA]"
+      className={`overflow-hidden rounded-[18px] border bg-[#FFFEFA] shadow-[0_2px_8px_rgba(24,56,47,.045)] ${
+        fixed ? "border-[#87A58A] ring-2 ring-[#4B7951]/20" : "border-[#E7E6DE]"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* §6.1.1: backdated samples must be labeled everywhere they show, including the demo phone's own. */}
+      <div className="flex gap-3 p-3.5">
+        <div className="relative size-[76px] shrink-0 overflow-hidden rounded-[13px] bg-[#E7E9E0]">
+          {thumbnail ? (
+            // Convex storage URLs are not configured for next/image.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-[#87938B]" aria-hidden="true">
+              <ReportIcon />
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1 py-0.5">
           {report.isSample && (
-            <span className="mb-1 inline-block rounded-md bg-[#F1F3F5] px-2 py-[3px] text-[11px] font-bold tracking-[.02em] text-[#364152]">
+            <span className="mb-1 inline-block rounded-md bg-[#F0F2E9] px-2 py-[3px] text-[10px] font-bold tracking-[.02em] text-[#52634F]">
               Sample · filmed in California
             </span>
           )}
-          <h2 className="truncate font-bold text-[#17212B]">{report.title ?? "Your report"}</h2>
-          {report.street && <p className="mt-1 truncate text-sm text-[#46505C]">{report.street}</p>}
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className={`size-1.5 rounded-full ${fixed ? "bg-[#4B7951]" : held ? "bg-[#B88338]" : "bg-[#D49B35]"}`} />
+            <span className={`text-[10px] font-bold uppercase tracking-[.09em] ${fixed ? "text-[#426B48]" : held ? "text-[#8E632A]" : "text-[#68756F]"}`}>
+              {status}
+            </span>
+          </div>
+          <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug tracking-[-.015em] text-[#1C342D]">
+            {report.title ?? "Neighborhood report"}
+          </h2>
+          {report.street && <p className="mt-1 truncate text-xs text-[#748079]">{report.street}</p>}
+          {report.status === "open" && (
+            <p className="mt-1.5 text-[11px] text-[#748079]">
+              {isMeToo ? "You me-too'd this" : report.audioMuted ? "Audio muted for privacy" : "Posted"} ·{" "}
+              {report.meTooCount} me-too{report.meTooCount === 1 ? "" : "s"}
+            </p>
+          )}
+          {(report.status === "pending" || fixed) && (
+            <p className="mt-1.5 text-[11px] text-[#87918B]">
+              {activityAge === 0
+                ? `${activityLabel} today`
+                : `${activityLabel} ${daysLabel(activityAge)} ago`}
+            </p>
+          )}
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${fixed ? "bg-[#E7F5EC] text-[#12643A]" : "bg-[#F1F3F5] text-[#364152]"}`}>
-          {status}
-        </span>
+        {publicReport && (
+          <Link
+            href={href}
+            aria-label="View report"
+            className="flex size-8 shrink-0 items-center justify-center self-center rounded-full text-[#728078] transition-colors hover:bg-[#EEF0E8] focus-visible:outline-2 focus-visible:outline-[#173F35]"
+          >
+            <ChevronIcon />
+          </Link>
+        )}
       </div>
 
-      {report.status === "open" && (
-        <p className="mt-2 text-sm text-[#46505C]">
-          {isMeToo ? "You me-too'd this" : report.audioMuted ? "Audio muted for privacy" : "Posted"} ·{" "}
-          {report.meTooCount} me-too{report.meTooCount === 1 ? "" : "s"}
-        </p>
-      )}
-      {fixed && <p className="mt-2 text-sm font-semibold text-[#157A47]">This report has been fixed.</p>}
       {fixed && (
-        <button
-          type="button"
-          aria-pressed={playing}
-          onClick={() => setPlaying((on) => !on)}
-          className="mt-3 rounded-lg bg-[#157A47] px-4 py-2 text-sm font-bold text-white"
-        >
-          {playing ? "Hide the fix" : "Play the fix"}
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EAEAE1] bg-[#F5F7EF] px-4 py-2.5">
+          <span className="text-xs font-medium text-[#48634F]">This report has been fixed.</span>
+          <button
+            type="button"
+            aria-pressed={playing}
+            onClick={() => setPlaying((on) => !on)}
+            className="min-h-9 rounded-lg bg-[#173F35] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#245446]"
+          >
+            {playing ? "Hide the fix" : "Play the fix"}
+          </button>
+        </div>
       )}
       {fixed && playing && (
-        <div data-testid="me-reveal" className="mx-auto mt-3 aspect-[9/16] w-full max-w-xs overflow-hidden rounded-xl">
+        <div data-testid="me-reveal" className="mx-auto aspect-[9/16] w-full max-w-xs overflow-hidden rounded-b-[18px]">
           <RevealPlayer report={report} active standalone />
         </div>
       )}
-      {held && reason && held.verdict !== "retake" && reason !== SCREENING_FAILED_REASON && (
-        <p className="mt-2 text-sm text-[#46505C]">{reason}</p>
+      {held && held.reason && held.verdict !== "retake" && held.reason !== SCREENING_FAILED_REASON && (
+        <div className="border-t border-[#EAEAE1] bg-[#FBF6E9] px-4 py-3">
+          <p className="text-sm leading-relaxed text-[#776A4B]">{held.reason}</p>
+          {(held.verdict === "reject" || held.verdict === "emergency") && <HoldDebug report={held} />}
+        </div>
       )}
-      {/* Retake and ScreeningFailed render their own debug line (§4.2.1, through Oct 30). */}
-      {held && (held.verdict === "reject" || held.verdict === "emergency") && <HoldDebug report={held} />}
       {held?.verdict === "emergency" && (
-        <a href="tel:911" className="mt-3 inline-flex rounded-lg bg-[#B42318] px-4 py-2 font-bold text-white">
-          Call 911
-        </a>
+        <div className="border-t border-[#F0D9D4] bg-[#FFF5F2] px-4 py-3">
+          <a href="tel:911" className="inline-flex min-h-10 items-center rounded-xl bg-[#A33F2B] px-4 text-sm font-semibold text-white">
+            Call 911
+          </a>
+        </div>
       )}
-      {held?.verdict === "retake" && !isMeToo && <Retake token={token} report={held} />}
+      {held?.verdict === "retake" && !isMeToo && (
+        <div className="border-t border-[#EAEAE1] px-3.5 py-3">
+          <Retake token={token} report={held} />
+        </div>
+      )}
       {held?.reason === SCREENING_FAILED_REASON && !isMeToo && (
-        <ScreeningFailed token={token} report={held} onPostAnother={onPostAnother} />
-      )}
-      {publicReport && (
-        <Link href={`/?report=${report._id}`} className="mt-3 inline-flex font-semibold text-[#157A47] underline">
-          View report
-        </Link>
+        <div className="border-t border-[#EAEAE1] px-3.5 py-3">
+          <ScreeningFailed token={token} report={held} onPostAnother={onPostAnother} />
+        </div>
       )}
       {fixed && <p className="sr-only">Fixed report</p>}
     </article>
+  );
+}
+
+function ReportIcon() {
+  return (
+    <svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
   );
 }
