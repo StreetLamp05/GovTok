@@ -344,6 +344,7 @@ Updated incrementally as decisions are locked in.
 - Slideshow posts swipe sideways through their photos. The description shows under the title (hidden when `audioMuted`).
 - Sound: phone browsers only autoplay video muted, so the first tap anywhere turns sound on for the session.
 - **Reveal (fixed cards):** play the original, then a ~0.7s stamp ("FIXED · N days · <who fixed it>"), then the fix clip, and loop the pair.
+  - Build details (2026-10-25, US19): under one day the stamp reads "FIXED · same day", matching the status chip (§6.1.1). A photo post shows its slideshow for 4 s before the stamp. An original clip that fails to load holds on its poster for 4 s, then the stamp and fix still play. A fixed report with no playable fix clip loops original → stamp → original. The fix clip is always muted. 📌 Follow-up (M1): the mockup's "Before / After · proof of fix" chip.
 - Rejected:
   - Split screen: halves too narrow on a 9:16 phone.
   - Swipe sideways between before and after: a hidden gesture judges would miss.
@@ -413,6 +414,7 @@ Updated incrementally as decisions are locked in.
 - **Supporting, from stored data:**
   - **Days to a verified fix:** median, and the share fixed within 30 days, by owner (city / Cobb / utility), from `createdAt` and `fixedAt`. Shows which agency is slow.
   - **Views per fix reveal:** a `revealViews` counter on the report, incremented once per card view per session when the "FIXED" stamp first plays (§5.1.1), not on each loop. Shows whether fixes are actually seen, which is the premise.
+    - *(Clarified 2026-10-25, US19:)* once per report per browser session (sessionStorage), counted from the feed only. Me-page reveals (§5.4.1) count only if US24 opts in.
   - **Me-toos as a share of (reports + me-toos):** a proxy for duplicate calls avoided. *(Denominator clarified 2026-10-25, US26.)*
 - **For Cal Hacks:** there's no real data yet, so the pitch shows the plan plus the live counters from the demo. One stats query; no dashboard screen.
 - Rationale: the premise is that visible fixes build trust (Scope), so the headline measures trust, and the counters show the mechanism (fixes happen, and people see them). It answers the Anthropic track's impact plan and Microsoft's "measurable usefulness."
@@ -448,6 +450,7 @@ Updated incrementally as decisions are locked in.
 - Spanish UI and posts
 - Video hosting at pilot scale (free-tier bandwidth)
 - Database read bandwidth of the live map query (2026-10-25, accepted for M0): `mapReports` (§5.2.1) reads every public report in full (~1.5–2 KB each, mostly transcript and segments) and re-runs on every write to an open or fixed report while anyone has the map open: posts clearing screening, me-toos, fixes, and reveal-view counts (§6.2.1, one write per viewer per session per fixed card, so ~50 people scrolling past 5 fixed cards add ~250 re-runs). The feed query has the same shape but wasn't measured here. Convex caches it across viewers. At 100 reports that is ~200 KB per re-run, or ~5,000 re-runs in the 1 GiB/month free tier. Revisit when the Convex dashboard shows database bandwidth above ~50% of the free tier, or above ~500 public reports. Options then: move transcript/segments/description into their own table, or keep a slim map-pin table
+- Reveal-view counter abuse (2026-10-25, accepted for M0): `recordRevealView` (§6.2.1) takes no token, so a script looping over public report IDs can inflate `revealViews`. Each call is also a write that re-runs the feed and map queries for every viewer (see the bandwidth item above). A resident token wouldn't stop it, since tokens are made on the client (§3.1.1). Options then: a per-resident server-side dedup table, or a rate limit.
 - Staff moderation queue for flagged posts (until then, `held` is released by hand in the Convex dashboard, §4.2.1)
 - Strip audio server-side from `mute`-verdict clips (§4.2.1)
 - Onboarding real fixers (city staff, contractors) with the city

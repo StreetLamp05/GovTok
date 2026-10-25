@@ -114,7 +114,21 @@ describe("captions", () => {
     expect(screen.queryByTestId("caption")).toBeNull();
   });
 
-  test("none while the element plays another clip (the fix clip, US19)", () => {
+  // A fixed card's original ends and stays ended through the stamp and fix clip (US19). Whisper's
+  // last segment can run past the clip's real length, so currentTime alone would keep it up.
+  test("none once the clip has ended", () => {
+    const video = videoAt();
+    show(report(), { video });
+    seek(video, 3.9);
+    expect(screen.getByTestId("caption").textContent).toBe("Third tire this month.");
+    act(() => {
+      Object.defineProperty(video, "ended", { configurable: true, value: true });
+      video.dispatchEvent(new Event("ended"));
+    });
+    expect(screen.queryByTestId("caption")).toBeNull();
+  });
+
+  test("none while the element plays another clip", () => {
     const video = videoAt("https://files.test/fix.mp4");
     show(report(), { video });
     seek(video, 0.5);
