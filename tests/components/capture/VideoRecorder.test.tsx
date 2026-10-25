@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import VideoRecorder from "../../../components/capture/VideoRecorder";
 import { framesFromFile, grabFrame } from "../../../lib/media/frames";
 import { useDemoMode } from "../../../lib/hooks/useDemoMode";
+import { convertClip } from "../../../lib/media/convertClip";
 
 // jsdom has no canvas or media decoding; the real frame code is covered by tests/lib/media and
 // the headless browser test in tests/browser/media.
@@ -13,6 +14,11 @@ vi.mock("../../../lib/media/frames", async (importOriginal) => ({
   framesFromFile: vi.fn(),
 }));
 vi.mock("../../../lib/hooks/useDemoMode", () => ({ useDemoMode: vi.fn(() => false) }));
+// Real conversion needs media decoding (tests/browser/media/convertClip.test.ts); needsConversion stays real.
+vi.mock("../../../lib/media/convertClip", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/media/convertClip")>()),
+  convertClip: vi.fn(),
+}));
 
 class FakeRecorder {
   static supported = ["video/mp4", "video/webm"];
@@ -61,6 +67,7 @@ beforeEach(() => {
   vi.mocked(grabFrame).mockImplementation(async () => new Blob([`frame-${frameNo++}`], { type: "image/jpeg" }));
   vi.mocked(framesFromFile).mockResolvedValue(Array.from({ length: 6 }, () => new Blob(["f"], { type: "image/jpeg" })));
   vi.mocked(useDemoMode).mockReturnValue(false);
+  vi.mocked(convertClip).mockReset();
 });
 
 afterEach(() => {
@@ -289,13 +296,50 @@ test("without getUserMedia, offers the phone's camera app and takes frames from 
   expect(input.accept).toBe("video/*");
   expect(input.getAttribute("capture")).toBe("environment");
 
-  const file = new File(["native"], "clip.mov", { type: "video/quicktime" });
+  const file = new File(["native"], "clip.mp4", { type: "video/mp4" });
   fireEvent.change(input, { target: { files: [file] } });
   await flush();
 
+  expect(convertClip).not.toHaveBeenCalled();
   expect(framesFromFile).toHaveBeenCalledWith(file);
-  expect(onDone).toHaveBeenCalledWith({ blob: file, mimeType: "video/quicktime", frames: expect.any(Array) });
+  expect(onDone).toHaveBeenCalledWith({ blob: file, mimeType: "video/mp4", frames: expect.any(Array) });
   expect(onDone.mock.calls[0][0].frames).toHaveLength(6);
+});
+
+test("an iPhone .mov is converted, with progress, and the converted clip is what's handed back", async () => {
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  const converted = new Blob(["converted"], { type: "video/mp4" });
+  let finish!: (blob: Blob) => void;
+  vi.mocked(convertClip).mockImplementation((_file, options) => {
+    options?.onProgress?.(0.5);
+    return new Promise((resolve) => (finish = resolve));
+  });
+  render(<VideoRecorder audio onDone={onDone} />);
+
+  const file = new File(["mov"], "IMG_0001.MOV", { type: "video/quicktime" });
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), { target: { files: [file] } });
+  // Called inside the change handler, so iOS still counts the tap.
+  expect(convertClip).toHaveBeenCalledWith(file, expect.any(Object));
+  await flush();
+  expect(screen.getByText("Converting your clip… 50%")).toBeTruthy();
+
+  await act(async () => finish(converted));
+  expect(framesFromFile).toHaveBeenCalledWith(converted);
+  expect(onDone).toHaveBeenCalledWith({ blob: converted, mimeType: "video/mp4", frames: expect.any(Array) });
+});
+
+test("a clip that can't be converted says so", async () => {
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  vi.mocked(convertClip).mockRejectedValue(new Error("no decoder"));
+  render(<VideoRecorder audio onDone={onDone} />);
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), {
+    target: { files: [new File(["mov"], "IMG_0001.MOV", { type: "video/quicktime" })] },
+  });
+  await flush();
+  expect(screen.getByRole("alert").textContent).toBe(
+    "We couldn't convert that video. Try a shorter clip, or record it here.",
+  );
+  expect(onDone).not.toHaveBeenCalled();
 });
 
 test("a file picked while the camera is still opening closes the camera when it arrives", async () => {
@@ -322,7 +366,7 @@ test("a file that can't be read says so, not that the camera failed", async () =
   render(<VideoRecorder audio onDone={onDone} />);
 
   fireEvent.change(screen.getByLabelText("Record with the camera app"), {
-    target: { files: [new File(["x"], "clip.mov", { type: "video/quicktime" })] },
+    target: { files: [new File(["x"], "clip.mp4", { type: "video/mp4" })] },
   });
   await flush();
 

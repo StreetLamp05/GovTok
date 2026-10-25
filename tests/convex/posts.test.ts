@@ -260,6 +260,23 @@ describe("myReport", () => {
     });
   });
 
+  test("shows the poster a failed screening's error and Try again count (US14)", async () => {
+    const { t, reportId } = await posted();
+    await t.run((ctx) =>
+      ctx.db.patch(reportId, {
+        status: "held",
+        reason: "screening failed",
+        screeningError: "Groq transcription failed (500).",
+        screeningRetries: 1,
+      }),
+    );
+    expect(await t.query(api.posts.myReport, { token: "resident-a", reportId })).toMatchObject({
+      reason: "screening failed",
+      screeningError: "Groq transcription failed (500).",
+      screeningRetries: 1,
+    });
+  });
+
   test("returns null for another resident's token, an unknown token or an empty one", async () => {
     const { t, reportId } = await posted();
     // A second resident who has posted, so their token resolves to a real resident.

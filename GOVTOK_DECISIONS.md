@@ -171,6 +171,7 @@ Updated incrementally as decisions are locked in.
   - `fixAttempts {reportId, byKind, byId, clipStorageId, frameStorageIds[], lat, lng, status: checking|verified|not_fixed|retake|failed|superseded, reason, createdAt}`. A fix waits here while Claude checks it, and carries Claude's reason back for a retake (§4.3.1).
   - `fixedByOrg` on reports, so the card can name the fixer's org (§3.1.2).
   - `createdAt` is an explicit field (not `_creationTime`), so samples can be backdated (§6.1.1).
+  - (2026-10-25, US14) `screeningError` (the last Groq or Claude error on a "screening failed" hold, shown only to the poster) and `screeningRetries` (Try again taps used), both on reports (§4.2.1).
 - When the duplicate check finds a match while someone is posting (§4.1.2), they're steered to me-too and their clip is discarded.
 - The map count is `1 + meTooCount` (§5.2.1).
 - Rationale: matches Scope's "one tap" exactly. Two tables. The before/after reveal stays a simple pair: original, then fix (§5.1.1).
@@ -200,7 +201,7 @@ Updated incrementally as decisions are locked in.
   - `held`: screening flagged it. Not public. Handling is in §4.2.1.
   - `open`: public. Days open = now − `createdAt`.
   - `fixed`: a proof-of-fix is attached (§4.3.1). The counter freezes at `fixedAt`, and the card shows the before/after (§5.1.1).
-- Transitions are one-way, except `held` → `open` if a flag is cleared by hand (§4.2.1), and `held` → `pending` on a retake (§4.2.1).
+- Transitions are one-way, except `held` → `open` if a flag is cleared by hand (§4.2.1), and `held` → `pending` on a retake, a Try again after "screening failed", or an operator `rescreen` (§4.2.1).
 - The feed and map show only `open` and `fixed`.
 - Reports owned by Cobb or a utility stay `open` until a neighbor or fixer verifies a fix (§4.3.2). Until then, the growing counter is part of the accountability story.
 - Rejected:
@@ -253,6 +254,10 @@ Updated incrementally as decisions are locked in.
 - **Retcon (2026-10-24):** a post is a **video or a photo slideshow** of 1–10 photos, picked from the camera or gallery (`<input type="file" accept="image/*" multiple>`) and resized in the browser to 1280px or less on the long edge. **Fixes stay video only** (§4.3.1). Reason: the user wants TikTok photo mode as an option.
   - (2026-10-25) Photos are pinned to where the phone is when posting, not where they were taken: re-encoding strips their EXIF GPS (and iOS Safari often removes it from library picks anyway). Photos mode says "Your post is pinned to where you are now, so post from where the problem is."
   - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
+- **Capture screen and uploads** (2026-10-25, US14, user request):
+  - Posts use a full-screen camera laid out like TikTok's: a ✕ top-left, a round shutter, VIDEO · PHOTO tabs under it, and Upload bottom-left. Video records the 20 s clip above. Photo snaps stills from the same live camera (1280 px or less, no EXIF), up to 10, with a strip to remove any, then Next. Upload adds photos from the library, up to 10 in all. A retake opens the same camera in the post's format only (§4.2.1). Fixes keep the plain recorder (§4.3.1).
+  - Upload in Video mode is **always available, not only in demo mode** (better for testing and the demo). A clip that isn't MP4/WebM (a new iPhone's `.mov`, often HEVC or 4K) or is over 25 MB is converted in the browser: played in a hidden `<video>`, drawn to a canvas at 1280 px or less on the long edge, and re-recorded with the same MediaRecorder settings as a live clip, audio included, cut at 20 s. It runs in real time, so a 20 s clip takes about 20 s ("Converting your video… 45%"). An MP4 or WebM under 25 MB passes through as it is.
+  - Rejected: ffmpeg in a Convex action (no binary, and it would download the whole clip) and ffmpeg.wasm (megabytes of download, and far slower than real time on a phone).
 - **Optional description** (2026-10-24): a text field of up to 280 characters on every post, video or slideshow. It goes into the Claude call (§1.1.3) and is screened (§4.2.1).
 - Storage: about 1 GB free in Convex works out to roughly 250 clips (§8 covers pilot-scale hosting).
 - Rationale: controls size, length and format, which keeps clips under the Groq file limit (§1.1.4) and the Convex 2-min upload timeout (§1.1.1), and makes them play on iOS and Android.
@@ -293,10 +298,17 @@ Updated incrementally as decisions are locked in.
 - **Failure:** if Groq or Claude errors, retry once, then `held` with reason "screening failed."
 - **Retake:** the new recording replaces the clip on the **same report**, which goes `held` → `pending` (§2.1.3).
 - **Screening failed** (2026-10-24): the poster gets a Try again button that re-runs screening (`held` → `pending`).
+- **The poster's result screens** (locked 2026-10-25, US14):
+  - Retake is the same format: a video post is re-recorded as a video, a slideshow re-picked as photos. The server refuses a switch. The new files go straight to screening, with no preview step, and the description is kept as it was (it can't be edited).
+  - The old files are deleted as soon as the retake is saved, not left for the 7-day purge (§7.1.1), along with the old screening result (category, title, owner, agency, transcript, mute). A retake that reuses an old file is refused.
+  - Try again is capped at 2 taps per report (`MAX_SCREENING_RETRIES`); a retake resets the count. After that the poster sees "We still couldn't check this post", a hint to post again (as photos, or filmed in GovTok), and Post another. Reason: some files always fail (iPhone `.mov`, §8), and each tap is a Groq and Claude run.
+  - "Post another" shows on Posted, reject, "couldn't find this post", and "screening failed" once the cap is reached. A retake hold never offers it, since a new post would leave this one held instead of replacing its clip. Emergency has "Back to the feed" instead, and "screening failed" has only Try again until the cap.
+  - A retake or Try again keeps the original `createdAt`, so days open (§2.1.3) count from the first post, including time spent held. Same as a hand `release`.
+  - Debug line, through Oct 30: every held screen shows the raw verdict and reason in small type, and a "screening failed" hold shows what failed (`screeningError`). The stored error is only its first line, cut before any vendor response body (Groq and Claude append JSON that can carry org IDs and rate-limit usage), so a poster sees e.g. "Groq transcription failed (429). Retry after 7 seconds." It stays on screen for both demos. 📌 Removal is tracked in §8.
 - `held` → `open` only by hand, in the Convex dashboard. No moderation UI (§8).
   - (2026-10-25, US13) The operator tools are `npx convex run screeningDb:release` and `screeningDb:rescreen`.
     - `release` refuses a report with no category or title (rescreen it instead). A `retake`, `emergency` or `reject` report also needs `"force": true`, because precedence means its audio and text were never checked for `mute`. Releasing bumps `lastActivityAt` (§5.1.2).
-    - `rescreen` re-runs screening on a `held` report, or on a `pending` one whose screening died (an action that crashes never retries). That's an operator-only exception to §2.1.3. A duplicate run is safe, because a result only lands while the report is still `pending` with the same media.
+    - `rescreen` re-runs screening on a `held` report, or on a `pending` one whose screening died (an action that crashes never retries). Only an operator can rescreen a `pending` report; §2.1.3 lists the `held` → `pending` case. A duplicate run is safe, because a result only lands while the report is still `pending` with the same media.
   - (2026-10-25, US13) "Screening failed" also clears the earlier result (category, title, owner, agency, mute), so a report retaken after a verdict can't be released with the old verdict's fields.
 - No blurring: Claude can't give per-frame boxes for a whole video, and re-encoding is too heavy for tonight.
 - The mute is a playback flag only. The stored file keeps its audio. 📌 Deferred (§8): strip audio server-side for the pilot.
@@ -387,7 +399,7 @@ Updated incrementally as decisions are locked in.
 
 **5.4.1 Private Me page (added 2026-10-24, directional)**
 - A tab visible only to its owner, keyed by the device token (§3.1.1). No display name, no public URL. The Scope non-goal "public profiles" still holds.
-- **My posts:** every report you posted, with live status: Checking… / retake or reject with Claude's reason / Call 911 / open (days, me-toos) / fixed. A held retake has a **Retake** button (§4.2.1).
+- **My posts:** every report you posted, with live status: Checking… / retake or reject with Claude's reason / Call 911 / "screening failed" with Try again (§4.2.1) / open (days, me-toos) / fixed. A held retake has a **Retake** button (§4.2.1).
 - **My me-toos:** reports you me-too'd, with status.
 - Fixed items in either list are highlighted, with the reveal (§5.1.1). On stage: "the pothole I posted just got fixed."
 - Rationale: the user wants results visible, which matters for the demo. Keeping it private avoids exposing which blocks someone films, usually their own (§7.1.1).
@@ -412,6 +424,7 @@ Updated incrementally as decisions are locked in.
   - Under one day, feed cards read "Open · today" / "Fixed same day", following the mockup (2026-10-25, US17). The fixer screens still say "0 days".
 - **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
 - **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
+  - (2026-10-25, US14) Posts now have Upload in every mode, not just demo mode, and `.mov` clips are converted (§4.1.1). Fix capture still shows "Upload clip" only in demo mode. Seeding samples still goes through `/admin/seed` (US25), which places them in Mableton with the Sample badge.
 - Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.
 - Rejected:
   - Samples at their real California locations: Berkeley potholes routed to "Cobb DOT."
@@ -444,7 +457,7 @@ Updated incrementally as decisions are locked in.
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
-  - `held` clips (retake / reject / emergency; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
+  - `held` clips (retake / reject / emergency / screening failed; never public) are deleted after 7 days by a Convex cron. The report row and its me-toos go too (2026-10-24). Unverified fix-attempt clips older than 7 days are also deleted.
     - (2026-10-25) Age runs from the newest file upload, so a retake (§4.2.1) restarts the 7 days. Samples (§6.1.1) are never purged, because their `createdAt` is backdated.
   - Published reports (`open` / `fixed`) are kept indefinitely; the public record is the point.
 - Rejected:
@@ -479,7 +492,9 @@ Updated incrementally as decisions are locked in.
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
 - Audio in clips for the Mableton pilot (privacy of narration and bystander voices; consider silent clips plus a text note)
 - Reports stuck in `pending` (2026-10-25, US13; manual for M0 via `rescreen`, §4.2.1): if Groq or Claude hangs until the action times out, no retry is scheduled, and the purge only removes `held` reports. Options: request timeouts in `transcribe` / `callClaudeJSON`, or a cron that holds stale `pending` reports as "screening failed"
-- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11
+- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11. (2026-10-25, US14) Uploads are now converted to MP4/WebM in the browser first (§4.1.1), so this only bites a `.mov` that skips that path
+- Retake deletes files another report might share (2026-10-25, US14, accepted for M0): `retakeReport` deletes the old clip and frames right away, and `createReport` doesn't check who uploaded a file or whether another report uses it. Someone holding another report's storage ID could post it, get a `retake`, and retake to delete it (purge already allows this after 7 days). Low risk, since no query returns another report's storage IDs: public reports carry file URLs only (`convex/lib/publicReport.ts`). Options then: check uploads belong to the poster, or skip files another report references (needs an index)
+- Remove the held-post debug line (raw verdict, reason and `screeningError` on the poster's screens, §4.2.1) after Mableton demo day (Oct 30). It stays on for the Cal Hacks and Oct 30 demos
 
 ---
 

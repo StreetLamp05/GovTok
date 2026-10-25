@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { ROUTING, categoryValidator } from "./lib/routing";
-import { SCREENING_FAILED_REASON } from "./lib/screening";
+import { SCREENING_FAILED_REASON, screeningErrorSummary } from "./lib/screening";
 import { segmentValidator, verdictValidator } from "./schema";
 
 // The files being screened. A retake replaces them on the same report (§4.2.1), so a result
@@ -101,14 +101,15 @@ export const applyVerdict = internalMutation({
 
 // After the retry also fails (§4.2.1).
 export const markFailed = internalMutation({
-  args: { reportId: v.id("reports"), media: v.optional(mediaValidator) },
-  handler: async (ctx, { reportId, media }) => {
+  args: { reportId: v.id("reports"), media: v.optional(mediaValidator), error: v.optional(v.string()) },
+  handler: async (ctx, { reportId, media, error }) => {
     if (!(await stillScreening(ctx, reportId, media))) return;
     // Clear what an earlier screening of other media left, so `release` can't publish media
     // nobody screened.
     await ctx.db.patch(reportId, {
       status: "held",
       reason: SCREENING_FAILED_REASON,
+      screeningError: error === undefined ? undefined : screeningErrorSummary(error),
       verdict: undefined,
       category: undefined,
       owner: undefined,
@@ -131,7 +132,7 @@ export const rescreen = internalMutation({
     if (report.status !== "held" && report.status !== "pending") {
       throw new ConvexError(`Only a held or pending report can be rescreened (this one is ${report.status}).`);
     }
-    await ctx.db.patch(reportId, { status: "pending", verdict: undefined, reason: undefined });
+    await ctx.db.patch(reportId, { status: "pending", verdict: undefined, reason: undefined, screeningError: undefined });
     await ctx.scheduler.runAfter(0, internal.screening.screenReport, { reportId });
   },
 });

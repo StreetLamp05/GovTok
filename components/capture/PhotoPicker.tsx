@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MAX_PHOTOS } from "@/convex/lib/postLimits";
-import { isHeic, keepPhotos, photoToJpeg } from "@/lib/media/photos";
+import { keepPhotos } from "@/lib/media/photos";
+import { HEIC_HINT, noPhotosMessage, prepareJpegs } from "@/lib/media/preparePhotos";
 
 // Photo mode for posts (§4.1.1): pick 1–10 photos from the camera or gallery. Each comes back
 // as an upright JPEG, 1280 px or less on the long edge, with its EXIF (and GPS) stripped.
@@ -15,8 +16,6 @@ type Phase =
   | { kind: "preparing" }
   | { kind: "ready"; jpegs: Blob[]; urls: string[]; cut: number; unreadable: number; heic: boolean }
   | { kind: "error"; message: string };
-
-const HEIC_HINT = "This browser can't open HEIC photos. Try JPEGs.";
 
 export default function PhotoPicker({ onDone }: Props) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -32,27 +31,15 @@ export default function PhotoPicker({ onDone }: Props) {
   useEffect(() => () => void attemptRef.current++, []);
 
   async function pick(list: FileList | null) {
-    const { kept, cut } = keepPhotos(Array.from(list ?? []));
-    if (!kept.length) return;
+    const files = Array.from(list ?? []);
+    if (!keepPhotos(files).kept.length) return;
     const attempt = ++attemptRef.current;
     setPhase({ kind: "preparing" });
-    // One at a time: full-size phone photos decoded together can run an iPhone out of memory.
-    const jpegs: Blob[] = [];
-    let heic = false;
-    for (const file of kept) {
-      try {
-        jpegs.push(await photoToJpeg(file));
-      } catch {
-        heic ||= isHeic(file);
-      }
-    }
+    const { jpegs, cut, unreadable, heic } = await prepareJpegs(files);
     if (attempt !== attemptRef.current) return;
-    if (!jpegs.length) {
-      const message = heic ? HEIC_HINT : "We couldn't read those photos. Try different ones.";
-      return setPhase({ kind: "error", message });
-    }
+    if (!jpegs.length) return setPhase({ kind: "error", message: noPhotosMessage(heic) });
     const urls = jpegs.map((jpeg) => URL.createObjectURL(jpeg));
-    setPhase({ kind: "ready", jpegs, urls, cut, unreadable: kept.length - jpegs.length, heic });
+    setPhase({ kind: "ready", jpegs, urls, cut, unreadable, heic });
   }
 
   const count = phase.kind === "ready" ? phase.jpegs.length : 0;

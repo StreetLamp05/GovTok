@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
 import { ConvexError } from "convex/values";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { RecordedClip } from "../../../components/capture/VideoRecorder";
+import type { CaptureMode } from "../../../components/capture/CameraCapture";
+import type { RecordedClip } from "../../../lib/hooks/useClipRecorder";
 import PostFlow from "../../../components/post/PostFlow";
 import type { LocationState } from "../../../lib/hooks/useCurrentLocation";
 
@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   myReport: undefined as unknown,
   myReportArgs: [] as unknown[],
   uploads: [] as Blob[],
+  push: vi.fn(),
 }));
 
 vi.mock("convex/react", () => ({
@@ -23,6 +24,7 @@ vi.mock("convex/react", () => ({
     return args === "skip" ? undefined : state.myReport;
   },
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push }) }));
 vi.mock("../../../lib/hooks/useCurrentLocation", () => ({
   useCurrentLocation: () => ({ ...state.location, refresh: state.refresh }),
 }));
@@ -36,25 +38,25 @@ vi.mock("../../../lib/upload", () => ({
     return `storage-${state.uploads.length}`;
   }),
 }));
-// The recorder (US7) is tested on its own; here it hands back a clip with 6 frames on a tap.
-const recorderProps: { audio?: boolean; autoOpen?: boolean }[] = [];
-vi.mock("../../../components/capture/VideoRecorder", () => ({
-  default: (props: { audio: boolean; autoOpen?: boolean; onDone: (clip: RecordedClip) => void }) => {
-    recorderProps.push(props);
-    return <button onClick={() => props.onDone(CLIP)}>fake record</button>;
-  },
-}));
-
-// The picker (US9) is tested on its own; here it hands back 3 JPEGs on a tap. "fake select"
-// stands in for the picker's own state (photos picked but not yet used).
-vi.mock("../../../components/capture/PhotoPicker", () => ({
-  default: function FakePicker(props: { onDone: (jpegs: Blob[]) => void }) {
-    const [selected, setSelected] = useState(0);
+// The camera is tested on its own (tests/components/capture/CameraCapture.test.tsx); here it
+// hands back a clip with 6 frames, or 3 photos, on a tap.
+type CameraProps = {
+  modes: CaptureMode[];
+  initialMode?: CaptureMode;
+  hints?: Partial<Record<CaptureMode, string>>;
+  onVideo: (clip: RecordedClip) => void;
+  onPhotos: (photos: Blob[]) => void;
+  onClose: () => void;
+};
+const cameraProps: CameraProps[] = [];
+vi.mock("../../../components/capture/CameraCapture", () => ({
+  default: (props: CameraProps) => {
+    cameraProps.push(props);
     return (
       <>
-        <button onClick={() => setSelected((n) => n + 1)}>fake select</button>
-        <span>{selected} selected</span>
-        <button onClick={() => props.onDone(PHOTOS)}>fake pick</button>
+        <button onClick={() => props.onVideo(CLIP)}>fake record</button>
+        <button onClick={() => props.onPhotos(PHOTOS)}>fake pick</button>
+        <button onClick={props.onClose}>fake close</button>
       </>
     );
   },
@@ -77,7 +79,8 @@ beforeEach(() => {
   state.myReport = undefined;
   state.myReportArgs = [];
   state.uploads = [];
-  recorderProps.length = 0;
+  state.push.mockReset();
+  cameraProps.length = 0;
 });
 afterEach(cleanup);
 
@@ -99,9 +102,16 @@ describe("PostFlow", () => {
     expect(state.refresh).toHaveBeenCalled();
   });
 
-  test("records with audio, opening the camera without a tap", () => {
+  test("opens the full-screen camera with Video first and Photo second", () => {
     render(<PostFlow />);
-    expect(recorderProps.at(-1)).toMatchObject({ audio: true, autoOpen: true });
+    expect(cameraProps.at(-1)).toMatchObject({ modes: ["video", "photos"], initialMode: "video" });
+    expect(cameraProps.at(-1)!.hints?.video).toMatch(/up to 20 seconds/);
+  });
+
+  test("✕ on the camera goes back to the feed", () => {
+    render(<PostFlow />);
+    fireEvent.click(screen.getByText("fake close"));
+    expect(state.push).toHaveBeenCalledWith("/");
   });
 
   test("the description has a live counter and stops at 280 characters", () => {
@@ -226,71 +236,31 @@ describe("Checking… screen", () => {
     expect(screen.getByRole("heading").textContent).toBe("Checking…");
   });
 
-  test("shows the live state with a feed link once the report is open", async () => {
+  // Each result screen is tested in CheckingScreen.test.tsx (US14). This checks the hand-off back to PostFlow.
+  test("Post another on a rejected post starts over at the recorder", async () => {
     const view = await submitted();
-    state.myReport = { _id: "report-1", status: "open", title: "Pothole on Floyd Rd", agency: "Cobb DOT" };
+    state.myReport = { _id: "report-1", status: "held", verdict: "reject", reason: "Not a public-space problem." };
     view.rerender(<PostFlow />);
-    expect(screen.getByRole("heading").textContent).toBe("Your post is live");
-    expect(screen.getByText(/Pothole on Floyd Rd · Cobb DOT/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "See it in the feed" }).getAttribute("href")).toBe("/?report=report-1");
-  });
-
-  test("shows the held state with the reason, and Post another starts over", async () => {
-    const view = await submitted();
-    state.myReport = { _id: "report-1", status: "held", verdict: "retake", reason: "A face is visible" };
-    view.rerender(<PostFlow />);
-    expect(screen.getByRole("heading").textContent).toBe("We held this post");
-    expect(screen.getByText("A face is visible")).toBeTruthy();
+    expect(screen.getByText("Not a public-space problem.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Post another" }));
     expect(screen.getByText("fake record")).toBeTruthy();
   });
 });
 
 describe("Photos", () => {
-  const choosePhotos = () => fireEvent.click(screen.getByRole("button", { name: "Photos" }));
   // A URL per photo, as the browser gives, since the preview keys its images by URL.
   beforeEach(() => {
     let n = 0;
     URL.createObjectURL = vi.fn(() => `blob:preview-${++n}`);
   });
 
-  test("Video is chosen by default; Photos swaps the recorder for the photo picker", () => {
+  test("Photo mode says the post is pinned to where you are now", () => {
     render(<PostFlow />);
-    expect(screen.getByRole("button", { name: "Video" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText("fake record")).toBeTruthy();
-
-    choosePhotos();
-    expect(screen.getByRole("button", { name: "Photos" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.queryByText("fake record")).toBeNull();
-    expect(screen.getByText("fake pick")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Video" }));
-    expect(screen.getByText("fake record")).toBeTruthy();
-  });
-
-  test("switching to Video and back keeps the photos already picked", () => {
-    render(<PostFlow />);
-    choosePhotos();
-    fireEvent.click(screen.getByText("fake select"));
-    expect(screen.getByText("1 selected")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Video" }));
-    expect(screen.getByText("fake record")).toBeTruthy();
-    expect(screen.getByText("fake select").closest(".hidden")).toBeTruthy();
-    choosePhotos();
-    expect(screen.getByText("1 selected")).toBeTruthy();
-    expect(screen.getByText("fake select").closest(".hidden")).toBeNull();
-  });
-
-  test("Photos mode says the post is pinned to where you are now", () => {
-    render(<PostFlow />);
-    choosePhotos();
-    expect(screen.getByText(/pinned to where you are now, so post from where the problem is/)).toBeTruthy();
+    expect(cameraProps.at(-1)!.hints?.photos).toMatch(/pinned to where you are now, so post from where the problem is/);
   });
 
   test("the preview shows every photo and has the description box", () => {
     render(<PostFlow />);
-    choosePhotos();
     fireEvent.click(screen.getByText("fake pick"));
     expect(screen.getAllByRole("img").map((img) => img.getAttribute("alt"))).toEqual([
       "Photo 1 of 3",
@@ -303,7 +273,6 @@ describe("Photos", () => {
 
   test("Submit uploads each photo, then calls createReport with mediaType photos and no clip", async () => {
     render(<PostFlow />);
-    choosePhotos();
     fireEvent.click(screen.getByText("fake pick"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: " Graffiti on the bridge " } });
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
@@ -325,12 +294,12 @@ describe("Photos", () => {
 
   test("Pick again drops the photos and goes back to the picker, keeping the description", () => {
     render(<PostFlow />);
-    choosePhotos();
     fireEvent.click(screen.getByText("fake pick"));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Broken bench" } });
     fireEvent.click(screen.getByRole("button", { name: "Pick again" }));
     expect(vi.mocked(URL.revokeObjectURL).mock.calls.map(([url]) => url)).toEqual(["blob:preview-1", "blob:preview-2", "blob:preview-3"]);
-    expect(screen.getByText("fake pick")).toBeTruthy();
+    // Back in the camera, in Photo mode.
+    expect(cameraProps.at(-1)!.initialMode).toBe("photos");
 
     fireEvent.click(screen.getByText("fake pick"));
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Broken bench");
@@ -340,7 +309,6 @@ describe("Photos", () => {
     const { uploadFile } = await import("../../../lib/upload");
     vi.mocked(uploadFile).mockRejectedValueOnce(new Error("Upload failed (500)"));
     render(<PostFlow />);
-    choosePhotos();
     fireEvent.click(screen.getByText("fake pick"));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
     expect(screen.getByRole("alert").textContent).toMatch(/couldn't send your post/);

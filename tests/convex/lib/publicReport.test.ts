@@ -30,6 +30,8 @@ async function seed(ctx: MutationCtx, overrides: Partial<Doc<"reports">> = {}) {
     status: "fixed",
     verdict: "pass",
     reason: "Nothing found",
+    screeningError: "Claude request failed (500)",
+    screeningRetries: 1,
     audioMuted: false,
     isSample: false,
     meTooCount: 3,
@@ -53,7 +55,19 @@ describe("publicReport", () => {
       const { report } = await seed(ctx);
       return await publicReport(ctx, report);
     });
-    for (const key of ["residentId", "fixedBy", "fixedByOrg", "verdict", "reason", "clipStorageId", "frameStorageIds", "fixStorageId"]) {
+    const privateKeys = [
+      "residentId",
+      "fixedBy",
+      "fixedByOrg",
+      "verdict",
+      "reason",
+      "screeningError",
+      "screeningRetries",
+      "clipStorageId",
+      "frameStorageIds",
+      "fixStorageId",
+    ];
+    for (const key of privateKeys) {
       expect(out).not.toHaveProperty(key);
     }
     expect(out.fixedByLabel).toBe("Mableton Sanitation");
