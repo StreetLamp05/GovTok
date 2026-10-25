@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as feed from "../feed.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as fixVerification from "../fixVerification.js";
@@ -29,6 +30,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  feed: typeof feed;
   crons: typeof crons;
   files: typeof files;
   fixVerification: typeof fixVerification;

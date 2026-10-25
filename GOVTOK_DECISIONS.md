@@ -468,7 +468,7 @@ Updated incrementally as decisions are locked in.
 - ~~3.1.2 Fixer access (who can close a report)~~ ✓ *(passcode per fixer)*
 
 **4.1 Posting**
-- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s, video only)*
+- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s; posts are a video or a photo slideshow, fixes video only)*
 - ~~4.1.2 Duplicate check when posting~~ ✓ *(location pre-check, 50 m)*
 
 **4.2 Screening**
@@ -505,7 +505,7 @@ Updated incrementally as decisions are locked in.
 ## Next steps (build)
 1. **Scaffold:** Next.js App Router + Convex. Deploy to Vercel immediately so camera access works over HTTPS (§1.1.1).
 2. **Keys:** Google Maps browser key + Geocoding key (§1.1.2), `ANTHROPIC_API_KEY` and `GROQ_API_KEY` in Convex env (§1.1.3, §1.1.4).
-3. **Schema:** `reports`, `meToos`, `residents`, `fixers` (§2.1.1), with indexes on `status`+`lastActivityAt` and on lat/lng for bounding-box queries.
+3. **Schema:** `reports`, `meToos`, `residents`, `fixers`, `fixAttempts` (§2.1.1). Indexes: `lastActivityAt` for the feed (the one index of §5.1.2; the query filters to `open` / `fixed`), and `status`+`lat` for bounding-box queries.
 4. **Pipeline:** upload → frames, transcript or photos → one Claude call (structured JSON) → verdict → status (§1.1.3, §4.2.1). Then the fix check (§4.3.1).
 5. **Surfaces** (partner, from wireframes): feed + reveal (§5.1), map (§5.2), `/fix` (§5.3), Me page (§5.4), capture screens (§4.1).
 6. **Demo:** seed action + `?demo=mableton` (§6.1.1). Film the before/after pairs.
