@@ -32,6 +32,7 @@ import type * as map from "../map.js";
 import type * as placeholder from "../placeholder.js";
 import type * as posts from "../posts.js";
 import type * as purge from "../purge.js";
+import type * as reveal from "../reveal.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
 import type * as stats from "../stats.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   placeholder: typeof placeholder;
   posts: typeof posts;
   purge: typeof purge;
+  reveal: typeof reveal;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
   stats: typeof stats;
