@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:bundle": "scripts/check-client-bundle.sh"
   },
   "dependencies": {
     "convex": "^1.48.0",

@@ -32,6 +32,15 @@ scripts/convex-env.sh --prod    # the production deployment
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Type check |
 | `npm run build` | Production build |
+| `npm run check:bundle` | After a build: fails if a server key's name or value is anywhere in `.next/` (except `cache/`) |
+
+## Deploy (Vercel + Convex production)
+
+Pushes to `main` deploy to Vercel Production. `vercel.json` sets the build command to `npx convex deploy --cmd 'npm run build'`, which pushes the Convex functions to production (authenticated by `CONVEX_DEPLOY_KEY`, set in Vercel's Production environment only) and builds Next.js with that deployment's `NEXT_PUBLIC_CONVEX_URL`. Its `ignoreCommand` skips every non-production build, so preview deployments never run. Branches are tested on a laptop instead.
+
+Server keys go on the Convex production deployment with `scripts/convex-env.sh --prod` (from the main checkout). `NEXT_PUBLIC_*` keys go in Vercel → Settings → Environment Variables.
+
+`/dev/camera` is a dev-only page that opens the rear camera, used to check the HTTPS deploy on a phone.
 
 ## Worktrees (parallel cards)
 
