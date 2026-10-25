@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: "edge-runtime",
     server: { deps: { inline: ["convex-test"] } },
-    include: ["convex/**/*.test.ts"],
+    // Client tests opt into jsdom with a `// @vitest-environment jsdom` docblock.
+    include: ["convex/**/*.test.ts", "lib/**/*.test.{ts,tsx}"],
   },
 });
