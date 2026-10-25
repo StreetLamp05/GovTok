@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { statusText } from "@/components/feed/CardOverlay";
+import { Retake, ScreeningFailed } from "@/components/post/CheckingScreen";
 import RevealPlayer from "@/components/RevealPlayer";
 import type { OwnerReport, PublicReport } from "@/convex/lib/publicReport";
 import { SCREENING_FAILED_REASON } from "@/convex/lib/screening";
@@ -10,7 +11,9 @@ import { SCREENING_FAILED_REASON } from "@/convex/lib/screening";
 type Props = {
   report: OwnerReport | PublicReport;
   now: number;
+  token?: string | null;
   isMeToo?: boolean;
+  onPostAnother?: () => void;
 };
 
 export function reportStatusText(report: OwnerReport | PublicReport, now: number): string {
@@ -26,7 +29,7 @@ export function reportStatusText(report: OwnerReport | PublicReport, now: number
   return statusText({ status: report.status, createdAt: report.createdAt, fixedAt: report.fixedAt }, now);
 }
 
-export default function MeReportCard({ report, now, isMeToo = false }: Props) {
+export default function MeReportCard({ report, now, token = null, isMeToo = false, onPostAnother }: Props) {
   const fixed = report.status === "fixed";
   const held = report.status === "held" ? report : null;
   const publicReport = report.status === "open" || fixed;
@@ -75,31 +78,17 @@ export default function MeReportCard({ report, now, isMeToo = false }: Props) {
           <RevealPlayer report={report} active standalone />
         </div>
       )}
-      {held && reason && <p className="mt-2 text-sm text-[#46505C]">{reason}</p>}
+      {held && reason && held.verdict !== "retake" && reason !== SCREENING_FAILED_REASON && (
+        <p className="mt-2 text-sm text-[#46505C]">{reason}</p>
+      )}
       {held?.verdict === "emergency" && (
         <a href="tel:911" className="mt-3 inline-flex rounded-lg bg-[#B42318] px-4 py-2 font-bold text-white">
           Call 911
         </a>
       )}
-      {held?.verdict === "retake" && (
-        <button
-          type="button"
-          disabled
-          title="Retake will be available when the recording flow is connected."
-          className="mt-3 rounded-lg bg-[#E2E6EA] px-4 py-2 text-sm font-bold text-[#46505C]"
-        >
-          Retake
-        </button>
-      )}
-      {held?.reason === SCREENING_FAILED_REASON && (
-        <button
-          type="button"
-          disabled
-          title="Try again will be available when screening retry is connected."
-          className="mt-3 rounded-lg bg-[#E2E6EA] px-4 py-2 text-sm font-bold text-[#46505C]"
-        >
-          Try again
-        </button>
+      {held?.verdict === "retake" && !isMeToo && <Retake token={token} report={held} />}
+      {held?.reason === SCREENING_FAILED_REASON && !isMeToo && (
+        <ScreeningFailed token={token} report={held} onPostAnother={onPostAnother} />
       )}
       {publicReport && (
         <Link href={`/?report=${report._id}`} className="mt-3 inline-flex font-semibold text-[#157A47] underline">

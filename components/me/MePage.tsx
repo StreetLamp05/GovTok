@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { OwnerReport, PublicReport } from "@/convex/lib/publicReport";
@@ -10,6 +11,7 @@ import MeReportCard from "./MeReportCard";
 type FollowedReport = { createdAt: number; report: PublicReport };
 
 export default function MePage() {
+  const router = useRouter();
   const token = useResidentToken();
   const reports = useQuery(api.me.myReports, token ? { token } : "skip");
   const meToos = useQuery(api.me.myMeToos, token ? { token } : "skip");
@@ -26,7 +28,14 @@ export default function MePage() {
       )}
       {token && reports !== undefined && meToos !== undefined && (
         <>
-          <ReportSection title="My posts" empty="You haven't posted a problem yet." reports={reports} now={now} />
+          <ReportSection
+            title="My posts"
+            empty="You haven't posted a problem yet."
+            reports={reports}
+            now={now}
+            token={token}
+            onPostAnother={() => router.push("/post")}
+          />
           <MeTooSection reports={meToos} now={now} />
         </>
       )}
@@ -39,11 +48,15 @@ function ReportSection({
   empty,
   reports,
   now,
+  token,
+  onPostAnother,
 }: {
   title: string;
   empty: string;
   reports: OwnerReport[];
   now: number;
+  token: string;
+  onPostAnother: () => void;
 }) {
   return (
     <section aria-label={title}>
@@ -54,7 +67,7 @@ function ReportSection({
         <ul className="flex flex-col gap-3">
           {reports.map((report) => (
             <li key={report._id}>
-              <MeReportCard report={report} now={now} />
+              <MeReportCard report={report} now={now} token={token} onPostAnother={onPostAnother} />
             </li>
           ))}
         </ul>

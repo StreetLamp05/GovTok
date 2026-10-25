@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CameraCapture from "@/components/capture/CameraCapture";
 import type { RecordedClip } from "@/lib/hooks/useClipRecorder";
-import PhotoPicker from "@/components/capture/PhotoPicker";
-import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
 import NearbyCheck from "@/components/post/NearbyCheck";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";

@@ -10,7 +10,7 @@ Spec: §5.4.1 (private Me page), §7.1.1 (resident privacy and muted-report proj
 
 ## Dependency gaps
 - US10 (me-too) and US19 (`RevealPlayer`) are merged and wired in (see below).
-- US14 (`retakeReport` / `retryScreening`) is not on main. Retake and Try again render disabled. US14 can't touch `components/me/*`, so wiring these buttons needs a follow-up card blocked by US14.
+- US14 is not on `main`, but its pushed branch has been merged into this US24 worktree so the shared poster-owned `Retake` and `ScreeningFailed` flows can be wired into My posts.
 - No Convex deployment push was run.
 
 ## Progress
@@ -36,7 +36,7 @@ Spec: §5.4.1 (private Me page), §7.1.1 (resident privacy and muted-report proj
 ## Wiring existing dependencies (after main merge)
 - No merge conflicts remain; the merge is staged, not committed.
 - Wired US19's `RevealPlayer` into `MeReportCard`: fixed items show "Play the fix", which plays the standalone reveal (fix clip always muted). Reveal views are not recorded from the Me page.
-- Retake / Try again stay disabled: US14's `retakeReport` / `retryScreening` aren't on main. Out of scope per user.
+- At this point Retake / Try again were still disabled; the remaining integration was later completed from the pushed US14 branch (see below).
 - Added component tests rendering each status (pending, retake, reject, emergency, screening failed, open, me-too, fixed + reveal) and a Convex test that runs US10's real `meToo` mutation into `myMeToos`.
 - Verified with Node 24 via `npx node@24`: full Vitest 514 passed; the only failures are `tests/vercel.test.ts` and `tests/scripts/check-client-bundle.test.ts`, which shell out to bash and don't run on this Windows shell. `tsc --noEmit`, `eslint .`, and `next build` pass.
 
@@ -48,3 +48,16 @@ Spec: §5.4.1 (private Me page), §7.1.1 (resident privacy and muted-report proj
 - Tests: the muted check now uses a fixture with a transcript and description; other-token check asserts the exact row; me-toos omit verdict/reason; owner sees verdict/reason; ordering test; same-day labels; fixed me-too card.
 - Me-page reveals don't record reveal views (§6.2.1 leaves this to US24).
 - Verified (Node 24): 519 tests pass; only the bash-script suites (`vercel.test.ts`, `check-client-bundle.test.ts`) fail on Windows. `tsc`, `eslint .` and `next build` pass.
+
+## US14 integration and verification
+- [x] Merge the pushed US14 branch into this worktree and use its existing poster-owned `retakeReport` / `retryScreening` mutations and shared `Retake` / `ScreeningFailed` components.
+- [x] Pass the resident token only to owner report cards; Me-too cards remain public-only and do not render owner actions.
+- [x] Test successful retake upload/mutation and screening retry, alongside existing action-error coverage in `CheckingScreen` tests.
+- [x] Run focused US24/US14 tests (204 passed across 8 files; Me privacy/projection tests: 21 passed across 2 files), `tsc --noEmit`, ESLint on changed integration files, and `next build`.
+- [x] Run `/review-card`; the follow-up review finding for capped retries is recorded below. The user chose to keep the full US14 integration on this branch.
+- [x] After the review fix, run Me/CheckingScreen tests (43 passed across 2 files), `tsc --noEmit`, ESLint on changed Me files, and `next build`.
+- No Convex deployment push or production phone test was run.
+
+## Review follow-up
+- Added the capped-screening-failure **Post another** action to My posts; it routes to `/post`. The component test verifies the exhausted state hides Try again and invokes the new-post callback.
+- The review also noted the full US14 implementation exceeds US24's original file-ownership boundary; the user explicitly chose to keep US14 bundled with US24.

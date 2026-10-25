@@ -1,10 +1,53 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { getFunctionName, type FunctionReference } from "convex/server";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { CaptureMode } from "../../../components/capture/CameraCapture";
+import type { RecordedClip } from "../../../lib/hooks/useClipRecorder";
 import type { OwnerReport } from "../../../convex/lib/publicReport";
 import MeReportCard, { reportStatusText } from "../../../components/me/MeReportCard";
+import { MAX_SCREENING_RETRIES, SCREENING_FAILED_REASON } from "../../../convex/lib/screening";
 
 const NOW = 10 * 86_400_000;
+
+const state = vi.hoisted(() => ({
+  mutations: {} as Record<string, ReturnType<typeof vi.fn>>,
+  uploads: [] as Blob[],
+}));
+
+vi.mock("convex/react", () => ({
+  useMutation: (ref: FunctionReference<"mutation">) => {
+    const name = getFunctionName(ref);
+    return (state.mutations[name] ??= vi.fn());
+  },
+}));
+vi.mock("../../../lib/upload", () => ({
+  uploadFile: vi.fn(async (blob: Blob) => {
+    state.uploads.push(blob);
+    return `storage-${state.uploads.length}`;
+  }),
+}));
+
+type CameraCaptureProps = {
+  modes: CaptureMode[];
+  onVideo: (clip: RecordedClip) => void;
+  onPhotos: (photos: Blob[]) => void;
+  onClose: () => void;
+};
+const RETAKE_CLIP: RecordedClip = {
+  blob: new Blob(["retake"], { type: "video/mp4" }),
+  mimeType: "video/mp4",
+  frames: [new Blob(["frame"], { type: "image/jpeg" })],
+};
+vi.mock("../../../components/capture/CameraCapture", () => ({
+  default: (props: CameraCaptureProps) => (
+    <div role="dialog" aria-label="Camera">
+      <button onClick={() => props.onVideo(RETAKE_CLIP)}>fake retake record</button>
+      <button onClick={() => props.onPhotos([RETAKE_CLIP.blob])}>fake retake photos</button>
+      <button onClick={props.onClose}>fake close camera</button>
+    </div>
+  ),
+}));
 
 function report(overrides: Partial<OwnerReport> = {}): OwnerReport {
   return {
@@ -33,6 +76,10 @@ function report(overrides: Partial<OwnerReport> = {}): OwnerReport {
 }
 
 afterEach(cleanup);
+beforeEach(() => {
+  state.mutations = {};
+  state.uploads = [];
+});
 
 describe("reportStatusText", () => {
   test.each([
@@ -64,6 +111,75 @@ test("renders held status reasons and an emergency call link", () => {
 
   rerender(<MeReportCard report={report({ status: "held", verdict: "emergency" })} now={NOW} />);
   expect(screen.getByRole("link", { name: "Call 911" }).getAttribute("href")).toBe("tel:911");
+});
+
+test("the Me page retake flow records replacement media and calls retakeReport", async () => {
+  const retakeReport = vi.fn().mockResolvedValue(undefined);
+  state.mutations["retake:retakeReport"] = retakeReport;
+  const view = render(
+    <MeReportCard
+      report={report({ status: "held", verdict: "retake", reason: "Cover the plate" })}
+      now={NOW}
+      token="resident-a"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Retake" }));
+  expect(screen.getByRole("dialog", { name: "Camera" })).toBeTruthy();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "fake retake record" })));
+
+  expect(state.uploads).toEqual([RETAKE_CLIP.blob, RETAKE_CLIP.frames[0]]);
+  expect(retakeReport).toHaveBeenCalledWith({
+    token: "resident-a",
+    reportId: "report-1",
+    mediaType: "video",
+    clipStorageId: "storage-1",
+    frameStorageIds: ["storage-2"],
+  });
+
+  view.rerender(<MeReportCard report={report({ status: "pending" })} now={NOW} token="resident-a" />);
+  expect(screen.getByText("Checking…")).toBeTruthy();
+});
+
+test("the Me page retries a failed screening and returns to Checking…", async () => {
+  const retryScreening = vi.fn().mockResolvedValue(undefined);
+  state.mutations["retake:retryScreening"] = retryScreening;
+  const view = render(
+    <MeReportCard
+      report={report({ status: "held", reason: SCREENING_FAILED_REASON, screeningRetries: 0 })}
+      now={NOW}
+      token="resident-a"
+    />,
+  );
+
+  const button = screen.getByRole("button", { name: "Try again" });
+  expect(button.hasAttribute("disabled")).toBe(false);
+  await act(async () => fireEvent.click(button));
+  expect(retryScreening).toHaveBeenCalledWith({ token: "resident-a", reportId: "report-1" });
+
+  view.rerender(<MeReportCard report={report({ status: "pending" })} now={NOW} token="resident-a" />);
+  expect(screen.getByText("Checking…")).toBeTruthy();
+});
+
+test("the Me page lets the resident start another post after screening retries are exhausted", () => {
+  const onPostAnother = vi.fn();
+  render(
+    <MeReportCard
+      report={report({
+        status: "held",
+        reason: SCREENING_FAILED_REASON,
+        screeningRetries: MAX_SCREENING_RETRIES,
+      })}
+      now={NOW}
+      token="resident-a"
+      onPostAnother={onPostAnother}
+    />,
+  );
+
+  expect(screen.getByRole("heading", { name: "We still couldn't check this post" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Post another" }));
+  expect(onPostAnother).toHaveBeenCalledOnce();
 });
 
 test("highlights fixed reports and shows open counts without revealing muted speech", () => {

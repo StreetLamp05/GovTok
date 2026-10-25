@@ -17,7 +17,6 @@ const state = vi.hoisted(() => ({
   myReport: undefined as unknown,
   myReportArgs: [] as unknown[],
   uploads: [] as Blob[],
-  push: vi.fn(),
 }));
 
 vi.mock("convex/react", () => ({
@@ -199,11 +198,11 @@ describe("PostFlow", () => {
         isMine: false,
       },
     ];
-    state.myReport = { status: "open", title: "Pothole", agency: "Cobb DOT" };
+    state.myReport = { _id: "posted-report", status: "open", title: "Pothole", agency: "Cobb DOT" };
     render(<PostFlow />);
     fireEvent.click(screen.getByRole("button", { name: "No, it's new" }));
     await recordAndSubmit();
-    expect(screen.getByText("Your post is live")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Posted" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Post another" }));
     expect(screen.getByRole("heading", { name: "Is it one of these?" })).toBeTruthy();
   });
