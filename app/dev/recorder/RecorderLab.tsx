@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
 import { hasAudioTrack } from "./hasAudioTrack";
+import { DEMO_VALUE } from "@/lib/demo";
 
 type Result = { clip: RecordedClip; clipUrl: string; frameUrls: string[] };
 type VideoInfo = { width: number; height: number; duration: number };
@@ -61,7 +62,7 @@ export default function RecorderLab() {
         Open the camera without a tap (<code>autoOpen</code>)
       </label>
       <p className="text-sm text-[#4A5A6E]">
-        Add <code>?demo=mableton</code> to the URL for the Upload clip button.
+        Add <code>?demo={DEMO_VALUE}</code> to the URL for the Upload clip button.
       </p>
 
       {!result && <VideoRecorder key={run} audio={audio} autoOpen={autoOpen} onDone={handleDone} />}

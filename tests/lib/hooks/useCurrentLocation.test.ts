@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { DEMO_POINT } from "../../../lib/demo";
+import { DEMO_POINT, DEMO_VALUE } from "../../../lib/demo";
 
 const ERROR_CODES = { PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 };
 
@@ -31,7 +31,7 @@ afterEach(() => mockGeolocation(undefined));
 
 test("returns DEMO_POINT in demo mode without asking for GPS", async () => {
   mockGeolocation(() => {});
-  window.history.replaceState(null, "", "/post?demo=mableton");
+  window.history.replaceState(null, "", `/post?demo=${DEMO_VALUE}`);
   const useCurrentLocation = await load();
 
   const { result } = renderHook(() => useCurrentLocation());
