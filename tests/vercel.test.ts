@@ -14,6 +14,11 @@ function ignoreExit(vercelEnv: string | undefined) {
   return spawnSync("sh", ["-c", config.ignoreCommand], { env }).status;
 }
 
+// Without it, a project whose preset is "Other" looks for a `public` output directory and fails.
+test("Vercel builds it as a Next.js app", () => {
+  expect(config.framework).toBe("nextjs");
+});
+
 test("the build deploys Convex, then builds Next.js against it", () => {
   expect(config.buildCommand).toBe("npx convex deploy --cmd 'npm run build'");
 });
