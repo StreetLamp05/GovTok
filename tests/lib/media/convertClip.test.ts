@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { convertedSize, needsConversion } from "../../../lib/media/convertClip";
+import { convertedSize, isTooLong, MAX_UPLOAD_MS, needsConversion } from "../../../lib/media/convertClip";
 
 const clip = (type: string, size = 4_000_000) => {
   const blob = new Blob(["x"], { type });
@@ -29,5 +29,15 @@ describe("convertedSize", () => {
     expect(convertedSize(640, 360)).toEqual({ width: 640, height: 360 });
     expect(convertedSize(1921, 1081)).toEqual({ width: 1280, height: 720 });
     expect(convertedSize(333, 501)).toEqual({ width: 332, height: 500 });
+  });
+});
+
+describe("isTooLong", () => {
+  test("allows 20.5 s (a live clip's rounding), cuts anything longer", () => {
+    expect(MAX_UPLOAD_MS).toBe(20_500);
+    expect(isTooLong(20)).toBe(false);
+    expect(isTooLong(20.5)).toBe(false);
+    expect(isTooLong(20.6)).toBe(true);
+    expect(isTooLong(120)).toBe(true);
   });
 });

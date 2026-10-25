@@ -94,8 +94,8 @@ The app runs as one city at a time: `ACTIVE_CITY` in `convex/lib/city.ts`. **Cal
    `npx convex run --prod fixers:seed '{"fixers":[{"name":"Demo crew","org":"SF Public Works","passcode":"…"}]}'`
 2. On the **demo phone**, open `/admin/seed` on prod and sign in with the Convex `ADMIN_PASSCODE`. It's checked server-side on every call and never stored in the page.
 3. Add one row per California clip (or set of photos), about 8 in all.
-   - Clips must be MP4 or WebM, because Groq can't transcribe an iPhone `.MOV`. Convert one first, e.g. `ffmpeg -i IMG_1234.MOV -c:v libx264 -c:a aac clip.mp4`.
-   - Fix (*after*) clips are silent at the source (§4.3.1), so convert those without audio, including the one uploaded on stage: `ffmpeg -i IMG_1235.MOV -c:v libx264 -an after.mp4`.
+   - iPhone `.MOV` clips can be chosen as they are. A clip that isn't MP4/WebM, is over 25 MB or runs over 20.5 s starts converting the moment you pick it (1280 px or less, cut at 20 s, §4.1.1), with "Converting… %" next to the file; Seed waits for it. It runs in real time, about 20 s per clip. Converting at the pick keeps the sound on iPhone, so seeding on the demo phone works. Fix clips convert without sound (§4.3.1). If a clip fails, convert it by hand: `ffmpeg -i IMG_1234.MOV -c:v libx264 -c:a aac clip.mp4`.
+   - Keep the stage *after* clip at 20 s or less, MP4, under 25 MB, so it uploads without a live conversion.
    - Each sample can sit at a preset near where it was really filmed, or at typed coordinates.
    - **Stage: open pothole** (Baker St by the Palace). Leave it open. This is what "Is it one of these?" offers.
    - **Stage: before/after spot** (Baker St at the lagoon). Tick "Posted by this device", upload only the *before* clip, and leave it open. Its pre-filmed *after* clip, from the same spot, gets uploaded on stage in step 3 of the stage flow. Because the phone owns it, the Me-page beat is the fix the audience just watched.

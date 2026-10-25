@@ -258,7 +258,12 @@ Updated incrementally as decisions are locked in.
   - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
 - **Capture screen and uploads** (2026-10-25, US14, user request):
   - Posts use a full-screen camera laid out like TikTok's: a ✕ top-left, a round shutter, VIDEO · PHOTO tabs under it, and Upload bottom-left. Video records the 20 s clip above. Photo snaps stills from the same live camera (1280 px or less, no EXIF), up to 10, with a strip to remove any, then Next. Upload adds photos from the library, up to 10 in all. A retake opens the same camera in the post's format only (§4.2.1). Fixes keep the plain recorder (§4.3.1).
-  - Upload in Video mode is **always available, not only in demo mode** (better for testing and the demo). A clip that isn't MP4/WebM (a new iPhone's `.mov`, often HEVC or 4K) or is over 25 MB is converted in the browser: played in a hidden `<video>`, drawn to a canvas at 1280 px or less on the long edge, and re-recorded with the same MediaRecorder settings as a live clip, audio included, cut at 20 s. It runs in real time, so a 20 s clip takes about 20 s ("Converting your video… 45%"). An MP4 or WebM under 25 MB passes through as it is.
+  - Upload in Video mode is **always available, not only in demo mode** (better for testing and the demo). A clip that isn't MP4/WebM (a new iPhone's `.mov`, often HEVC or 4K) or is over 25 MB is converted in the browser: played in a hidden `<video>`, drawn to a canvas at 1280 px or less on the long edge, and re-recorded with the same MediaRecorder settings as a live clip, audio included, cut at 20 s. It runs in real time, so a 20 s clip takes about 20 s ("Converting your video… 45%"). An MP4 or WebM under 25 MB passes through as it is, unless it runs over 20.5 s: then it's converted too, which cuts it to 20 s, so the 20 s cap and Claude's frame spacing hold for uploads (user decision, 2026-10-25). The length is read after the tap, so on iOS such a clip may convert without sound.
+  - The conversion runs wherever a clip comes from a file, not just on posts: the fix flow's camera-app fallback and demo upload, `/admin/video-intake` ("Converting your clip… N%" there) and `/admin/seed`. A fix `.mov` used to pass through, since fixes aren't transcribed; converting it also makes the reveal play on Android. Fix clips convert without sound, so a converted fix clip is silent where it's stored (§4.3.1).
+  - If the browser won't start the audio (iOS can stop counting the tap once the library picker closes), the clip is converted without sound rather than not at all, and an empty result is an error. Closing the camera cancels a conversion in progress.
+  - An uploaded clip, like a slideshow, is pinned to where the phone is when posting, and the Video hint says so ("An upload is pinned to where you are now").
+  - Photo mode doesn't use the microphone, so a denied mic still leaves the Photo shutter working; Video reopens the camera with sound.
+  - In demo mode the full-screen camera repeats the "Demo mode: location simulated" banner (§6.1.1).
   - Rejected: ffmpeg in a Convex action (no binary, and it would download the whole clip) and ffmpeg.wasm (megabytes of download, and far slower than real time on a phone).
 - **Optional description** (2026-10-24): a text field of up to 280 characters on every post, video or slideshow. It goes into the Claude call (§1.1.3) and is screened (§4.2.1).
 - Storage: about 1 GB free in Convex works out to roughly 250 clips (§8 covers pilot-scale hosting).
@@ -433,7 +438,7 @@ Updated incrementally as decisions are locked in.
     - `/admin/seed` calls `convex/seed.ts`, which checks `ADMIN_PASSCODE` on every call. The raw passcode is sent each time, with no session token and no limit on guesses (see §8).
     - A sample is inserted with `isSample: true` from the start, not after screening. That way going public skips the feed bump (§5.1.2) and the purge skips it (§7.1.1).
     - One batch's screenings run 10 s apart.
-    - Seeded video clips must be MP4 or WebM, because transcription can't read QuickTime.
+    - Seeded video clips must reach the server as MP4 or WebM, because transcription can't read QuickTime. (2026-10-25, US14) The seed page now converts a `.mov` (or a clip over 25 MB or 20.5 s) as soon as it's picked, inside that tap so iPhone keeps the sound; fix clips convert without sound (§4.3.1).
     - A sample's fix clip is filed as a fix attempt only once its report is `open`. If the report is held, the clip is dropped.
     - That attempt uses the report's own location, so the 50 m fix check (§4.3.1) is skipped on purpose. The real `verifyFix` still checks it.
     - A neighbor fix gets a throwaway resident and follows §4.3.2 (never on city-owned reports).
@@ -477,7 +482,7 @@ Updated incrementally as decisions are locked in.
 ### 7.1 Privacy
 
 **7.1.1 What's public — exact location, no poster identity; held clips purged after 7 days**
-- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow is pinned to where the phone was when posting, which may not be where the photos were taken (§4.1.1).
+- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow or an uploaded clip is pinned to where the phone was when posting, which may not be where it was filmed (§4.1.1).
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
@@ -517,7 +522,7 @@ Updated incrementally as decisions are locked in.
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
 - Audio in clips for the Mableton pilot (privacy of narration and bystander voices; consider silent clips plus a text note)
 - Reports stuck in `pending` (2026-10-25, US13; manual for M0 via `rescreen`, §4.2.1): if Groq or Claude hangs until the action times out, no retry is scheduled, and the purge only removes `held` reports. Options: request timeouts in `transcribe` / `callClaudeJSON`, or a cron that holds stale `pending` reports as "screening failed"
-- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11. (2026-10-25, US14) Uploads are now converted to MP4/WebM in the browser first (§4.1.1), so this only bites a `.mov` that skips that path
+- iPhone `video/quicktime` clips (native-camera fallback, demo upload) always end "screening failed", because `transcribe` (US11) accepts only mp4/webm. Filed on US11. (2026-10-25, US14) Every in-app path now converts a `.mov` to MP4/WebM in the browser first (posts, fixes, `/admin/video-intake`, and `/admin/seed` via `normalizeClip`, §4.1.1)
 - Retake deletes files another report might share (2026-10-25, US14, accepted for M0): `retakeReport` deletes the old clip and frames right away, and `createReport` doesn't check who uploaded a file or whether another report uses it. Someone holding another report's storage ID could post it, get a `retake`, and retake to delete it (purge already allows this after 7 days). Low risk, since no query returns another report's storage IDs: public reports carry file URLs only (`convex/lib/publicReport.ts`). Options then: check uploads belong to the poster, or skip files another report references (needs an index)
 - Remove the held-post debug line (raw verdict, reason and `screeningError` on the poster's screens, §4.2.1) after Mableton demo day (Oct 30). It stays on for the Cal Hacks and Oct 30 demos
 

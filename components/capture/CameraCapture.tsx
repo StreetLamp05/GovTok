@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import DemoBanner from "@/app/DemoBanner";
 import { MAX_PHOTOS } from "@/convex/lib/postLimits";
 import { useClipRecorder, type RecordedClip } from "@/lib/hooks/useClipRecorder";
 import { MAX_RECORD_MS } from "@/lib/media/constants";
@@ -36,35 +37,52 @@ const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 export default function CameraCapture({ modes, initialMode, audio = true, hints, onVideo, onPhotos, onClose }: Props) {
   const [mode, setMode] = useState<CaptureMode>(initialMode && modes.includes(initialMode) ? initialMode : modes[0]);
-  const recorder = useClipRecorder({ audio: audio && modes.includes("video"), onDone: onVideo, autoOpen: true });
+  // The microphone only for Video, so a denied mic still leaves the Photo shutter working.
+  const wantAudio = audio && mode === "video";
+  const recorder = useClipRecorder({ audio: wantAudio, onDone: onVideo, autoOpen: true });
   const { videoRef, phase, inPage } = recorder;
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [preparing, setPreparing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  // The latest photos, for the 10-photo room check and for revoking thumbnails on unmount.
+  // Kept in step with every change, so two quick snaps can't both see room for one more.
   const photosRef = useRef(photos);
-  useEffect(() => {
-    photosRef.current = photos;
-  }, [photos]);
   useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
+
+  // Reopen the camera when the mode needs a different stream: Video after a silent one, or
+  // Photo after the camera failed (likely the mic was denied, which Photo doesn't need).
+  const openedWithAudio = useRef(wantAudio);
+  useEffect(() => {
+    if (!inPage) return;
+    const reopen = wantAudio ? !openedWithAudio.current : phase.kind === "error";
+    if (!reopen) return;
+    openedWithAudio.current = wantAudio;
+    void recorder.openCamera();
+    // Only on a mode switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const recording = phase.kind === "recording";
   const busy = recorder.busy || preparing;
   const full = photos.length >= MAX_PHOTOS;
   const cameraOpen = phase.kind === "preview" || recording;
 
+  function commit(next: Photo[]) {
+    photosRef.current = next;
+    setPhotos(next);
+  }
+
+  // Adds what fits under 10 and returns how many didn't.
   function addPhotos(blobs: Blob[]) {
-    const room = MAX_PHOTOS - photosRef.current.length;
-    const added = blobs.slice(0, room).map((blob) => ({ blob, url: URL.createObjectURL(blob) }));
-    setPhotos((current) => [...current, ...added]);
+    const current = photosRef.current;
+    const added = blobs.slice(0, MAX_PHOTOS - current.length).map((blob) => ({ blob, url: URL.createObjectURL(blob) }));
+    commit([...current, ...added]);
     return blobs.length - added.length;
   }
 
   function removePhoto(index: number) {
-    setPhotos((current) => {
-      URL.revokeObjectURL(current[index].url);
-      return current.filter((_, i) => i !== index);
-    });
+    const current = photosRef.current;
+    URL.revokeObjectURL(current[index].url);
+    commit(current.filter((_, i) => i !== index));
   }
 
   async function snap() {
@@ -125,6 +143,10 @@ export default function CameraCapture({ modes, initialMode, audio = true, hints,
 
   return (
     <div role="dialog" aria-label="Camera" className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+      {/* Full screen covers the page's banner, and everything simulated stays labeled (§6.1.1). */}
+      <div className="relative z-10">
+        <DemoBanner />
+      </div>
       <video
         ref={videoRef}
         playsInline

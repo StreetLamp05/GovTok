@@ -5,6 +5,7 @@ import CameraCapture, { type CaptureMode } from "../../../components/capture/Cam
 import type { RecorderPhase } from "../../../lib/hooks/useClipRecorder";
 import { grabFrame } from "../../../lib/media/frames";
 import { prepareJpegs } from "../../../lib/media/preparePhotos";
+import { useDemoMode } from "../../../lib/hooks/useDemoMode";
 
 // The recording itself is useClipRecorder's (covered through tests/components/capture/
 // VideoRecorder.test.tsx); here it's a fake whose phase each test sets.
@@ -36,6 +37,7 @@ vi.mock("../../../lib/media/frames", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/media/frames")>()),
   grabFrame: vi.fn(),
 }));
+vi.mock("../../../lib/hooks/useDemoMode", () => ({ useDemoMode: vi.fn(() => false) }));
 vi.mock("../../../lib/media/preparePhotos", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/media/preparePhotos")>()),
   prepareJpegs: vi.fn(),
@@ -54,6 +56,7 @@ beforeEach(() => {
   snapNo = 0;
   vi.mocked(grabFrame).mockReset().mockImplementation(async () => new Blob([`snap ${snapNo++}`], { type: "image/jpeg" }));
   vi.mocked(prepareJpegs).mockReset();
+  vi.mocked(useDemoMode).mockReturnValue(false);
   let n = 0;
   URL.createObjectURL = vi.fn(() => `blob:thumb-${++n}`);
   URL.revokeObjectURL = vi.fn();
@@ -81,6 +84,34 @@ describe("CameraCapture", () => {
   test("a photos-only camera doesn't ask for the microphone", () => {
     show(["photos"]);
     expect(hook.options.at(-1)).toMatchObject({ audio: false });
+  });
+
+  test("Photo mode needs no microphone: after a failed (mic-denied) open, switching to Photo reopens without it", () => {
+    hook.phase = { kind: "error", message: "Camera or microphone permission was denied." };
+    show();
+    expect(hook.options.at(-1)).toMatchObject({ audio: true });
+    fireEvent.click(tab("Photo"));
+    expect(hook.options.at(-1)).toMatchObject({ audio: false });
+    expect(hook.openCamera).toHaveBeenCalledTimes(1);
+  });
+
+  test("a working camera isn't reopened for Photo, but a silent one is reopened for Video", () => {
+    const view = show(["video", "photos"], { initialMode: "photos" });
+    expect(hook.options.at(-1)).toMatchObject({ audio: false });
+    fireEvent.click(tab("Video"));
+    expect(hook.openCamera).toHaveBeenCalledTimes(1);
+    expect(hook.options.at(-1)).toMatchObject({ audio: true });
+    fireEvent.click(tab("Photo"));
+    fireEvent.click(tab("Video"));
+    // Already open with sound.
+    expect(hook.openCamera).toHaveBeenCalledTimes(1);
+    view.unmount();
+  });
+
+  test("in demo mode the camera still shows the 'location simulated' banner (§6.1.1)", () => {
+    vi.mocked(useDemoMode).mockReturnValue(true);
+    show();
+    expect(screen.getByRole("dialog", { name: "Camera" }).textContent).toContain("Demo mode: location simulated");
   });
 
   test("Video is first: tapping the shutter records, and the tabs switch to Photo", () => {
@@ -163,6 +194,19 @@ describe("CameraCapture", () => {
       expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:thumb-1");
       fireEvent.click(button("Next")!);
       expect(await (onPhotos.mock.calls[0][0] as Blob[])[0].text()).toBe("snap 1");
+    });
+
+    test("two quick snaps with room for one keep it at 10", async () => {
+      show(["photos"]);
+      for (let i = 0; i < 9; i++) await act(async () => fireEvent.click(button("Take photo")!));
+      const pending: ((b: Blob) => void)[] = [];
+      vi.mocked(grabFrame).mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+      fireEvent.click(button("Take photo")!);
+      fireEvent.click(button("Take photo")!);
+      await act(async () => pending.forEach((resolve, i) => resolve(new Blob([`late ${i}`]))));
+      expect(screen.getByText("10/10")).toBeTruthy();
+      fireEvent.click(button("Next")!);
+      expect(onPhotos.mock.calls[0][0]).toHaveLength(10);
     });
 
     test("stops at 10 photos", async () => {

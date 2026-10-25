@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { convertClip } from "../../../lib/media/convertClip";
+import { clipDurationS } from "../../../lib/media/frames";
 
 // Real decoding and re-recording in headless Chromium. The fixture is a 1080p WebM recorded
 // here from an animated canvas; a real iPhone .mov (HEVC) is covered by the manual phone check.
@@ -61,4 +62,19 @@ test("stops at maxMs, the 20 s cap in production", async () => {
 
 test("rejects a file that isn't a video", async () => {
   await expect(convertClip(new Blob(["not a video"], { type: "video/quicktime" }))).rejects.toThrow();
+}, 20_000);
+
+test("an abort stops the conversion with an AbortError", async () => {
+  const source = await recordCanvas(640, 360, 3000);
+  const controller = new AbortController();
+  const converting = convertClip(source, { signal: controller.signal });
+  setTimeout(() => controller.abort(), 500);
+  await expect(converting).rejects.toMatchObject({ name: "AbortError" });
+}, 20_000);
+
+test("clipDurationS reads a MediaRecorder WebM's length, which its header leaves out", async () => {
+  const source = await recordCanvas(320, 240, 1500);
+  const seconds = await clipDurationS(source);
+  expect(seconds).toBeGreaterThan(1);
+  expect(seconds).toBeLessThan(3);
 }, 20_000);

@@ -1,7 +1,7 @@
 import { isHeic, keepPhotos, photoToJpeg } from "./photos";
 
 // Picked photos (§4.1.1) ready to post: the first 10, each an upright JPEG of 1280 px or less.
-// Shared by PhotoPicker and CameraCapture's Upload button.
+// Used by CameraCapture's Upload button (it replaced US9's PhotoPicker).
 
 export const HEIC_HINT = "This browser can't open HEIC photos. Try JPEGs.";
 export const UNREADABLE_PHOTOS = "We couldn't read those photos. Try different ones.";

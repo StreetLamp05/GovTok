@@ -82,3 +82,33 @@ User asked for a TikTok-style capture screen, a photo shutter, and video upload 
 - Visual check: headless Chromium with a fake camera and an iPhone 13 viewport, screenshots of Video, Photo (2 taken, strip and Next) and recording. Fixed from the screenshots: the shutter jumped when the tabs hid during recording; the strip's remove buttons were clipped
 - Verification: `npm test` 55 files, 579 pass (new: `CameraCapture.test.tsx` 20, `tests/lib/media/convertClip.test.ts` 8, 2 VideoRecorder conversion tests); `npm run test:browser` 12 pass, including real `convertClip` runs (1080p WebM → playable 1280×720, progress reported, `maxMs` honoured, junk rejected); tsc, lint, `next build` clean
 - Not checked here: a real iPhone `.mov` (HEVC) through conversion, and iOS keeping the tap's permission for the unmuted playback. That's the manual phone test
+
+## Review fixes (round 3, capture redesign)
+Third review verdict was CLEAN (15/15 ACs, 44/44 mutations caught, nothing blocking). Fixed:
+- [x] A1 `convertClip`: resumes the AudioContext in the tap; if it still isn't running after 500 ms the clip converts without sound instead of coming out empty; an empty result is an error; on any error the recorder and tracks are stopped
+- [x] A2 two quick snaps at 9 photos made 11: the photo list ref now changes in step with every add/remove (test fails against the old code)
+- [x] A4 conversion is cancelled (AbortSignal) when the camera closes or another file is picked (browser test: abort → AbortError; component test: unmount aborts)
+- [x] A5/B6 `PhotoPicker` was dead (nothing, US25 included, imports it): removed with its test; its photo rules are covered by new `tests/lib/media/preparePhotos.test.ts`
+- [x] B2 the Video hint says an upload is pinned to where you are now; §7.1.1 and §4.1.1 say so too; LocationGate comment fixed
+- [x] B3 the camera shows the "Demo mode: location simulated" banner (test)
+- [x] B4/B7 spec: fix flow and admin intake convert too; §8 .mov note; stale comments ("720p or less", "fails fast", PhotoPicker) fixed. (Task-file note: the shared photo code is `lib/media/preparePhotos.ts`)
+- [x] B5 Photo mode doesn't need the microphone: after a failed open, switching to Photo reopens without audio; a silent camera reopens with sound for Video (tests)
+- Verification: `npm test` 55 files, 578 pass; `npm run test:browser` 13 pass; tsc, lint, `next build`, `check:bundle` clean
+- Open for the user: B1 (20 s cap on pass-through uploads), A3 (fix flow converting .mov: kept, recorded in §4.1.1)
+- Flag for US25: `/admin/seed` should run `needsConversion` / `convertClip` before `framesFromFile` for iPhone clips
+
+## Decisions (user, round 3) and the Vercel fix
+- [x] **B1 20 s cap:** an MP4/WebM under 25 MB is converted when it runs over 20.5 s (`isTooLong`, `MAX_UPLOAD_MS`), which cuts it to 20 s. Length via new `clipDurationS` in `lib/media/frames.ts` (handles MediaRecorder WebM's missing duration). A clip whose length can't be read passes on to `framesFromFile`. Tests: unit threshold, VideoRecorder 95 s vs 20.4 s vs unreadable, browser WebM duration
+- [x] **A3 fix-flow conversion:** kept (§4.1.1)
+- [x] **Vercel preview failure on `6e223e6`** (the merge of main into this branch): the merge kept the old `PhotoPicker` / `VideoRecorder` imports in `PostFlow.tsx` next to the new ones (duplicate `RecordedClip`), and `PostFlow.test.tsx` got two `push` keys. Fixed both, plus US10's test that expected US8's "Your post is live" (now "Posted"). Local branch fast-forwarded to `6e223e6` first (WIP backed up as a patch and a tagged stash, reapplied cleanly, stash dropped). `scripts/vercel-build.sh` with `VERCEL_ENV=preview` and no `.env.local` exits 0
+- Verification: `npm test` 60 files, 628 pass; `npm run test:browser` 14 pass; tsc (app and `convex/`), lint clean
+- [x] **Seed page (US25, merged here; user OK'd):** `/admin/seed` accepted only MP4/WebM and uploaded clips raw. Now it accepts any video and runs sample and fix clips through new `lib/media/normalizeClip.ts` (convert when format, size or length needs it) with "Converting sample N… %" progress. README seed runbook updated (no manual ffmpeg step, except stripping talk from fix clips). Tests: `tests/lib/media/normalizeClip.test.ts`
+- Verification: `npm test` 61 files, 632 pass; tsc, lint, `next build` clean
+
+## Round 4 review (NEEDS_INPUT → decided) and merge prep
+- [x] **Seed audio (user: convert on pick):** each seed row starts `normalizeClip` in its file input's change handler (inside the tap, so iOS keeps the sound), shows "Converting… N%" on the row, and Seed awaits it; replacing a file or removing a row aborts it. `normalizeClip` starts converting synchronously when type/size need it
+- [x] **Fix-clip audio (user: whatever merges fastest → strip, already built):** `convertClip({ audio: false })` converts without sound; the fix flow (`useClipRecorder` with audio off) and seed fix clips use it. README `ffmpeg -an` step removed
+- [x] AudioContext is closed even when the sound was dropped
+- [x] Stale §6.1.1 "must be MP4 or WebM" line, README "720p" / "over 20 s" / stage after-clip note fixed
+- Not done (low, follow-ups): HEIC named when only some photos fail; Photo→Video quick-switch race after a failed open; photo-prep object URLs if ✕ during "Preparing your photos…"; tests for the convertClip hardening paths
+- No further review round (user wants the fastest merge)

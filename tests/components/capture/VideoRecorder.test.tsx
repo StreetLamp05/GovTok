@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import VideoRecorder from "../../../components/capture/VideoRecorder";
-import { framesFromFile, grabFrame } from "../../../lib/media/frames";
+import { clipDurationS, framesFromFile, grabFrame } from "../../../lib/media/frames";
 import { useDemoMode } from "../../../lib/hooks/useDemoMode";
 import { convertClip } from "../../../lib/media/convertClip";
 
@@ -12,6 +12,7 @@ vi.mock("../../../lib/media/frames", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/media/frames")>()),
   grabFrame: vi.fn(),
   framesFromFile: vi.fn(),
+  clipDurationS: vi.fn(),
 }));
 vi.mock("../../../lib/hooks/useDemoMode", () => ({ useDemoMode: vi.fn(() => false) }));
 // Real conversion needs media decoding (tests/browser/media/convertClip.test.ts); needsConversion stays real.
@@ -68,6 +69,7 @@ beforeEach(() => {
   vi.mocked(framesFromFile).mockResolvedValue(Array.from({ length: 6 }, () => new Blob(["f"], { type: "image/jpeg" })));
   vi.mocked(useDemoMode).mockReturnValue(false);
   vi.mocked(convertClip).mockReset();
+  vi.mocked(clipDurationS).mockReset().mockResolvedValue(12);
 });
 
 afterEach(() => {
@@ -326,6 +328,55 @@ test("an iPhone .mov is converted, with progress, and the converted clip is what
   await act(async () => finish(converted));
   expect(framesFromFile).toHaveBeenCalledWith(converted);
   expect(onDone).toHaveBeenCalledWith({ blob: converted, mimeType: "video/mp4", frames: expect.any(Array) });
+});
+
+test("closing cancels the conversion in progress", async () => {
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  vi.mocked(convertClip).mockReturnValue(new Promise(() => {}));
+  const view = render(<VideoRecorder audio onDone={onDone} />);
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), {
+    target: { files: [new File(["mov"], "IMG_0001.MOV", { type: "video/quicktime" })] },
+  });
+  const signal = vi.mocked(convertClip).mock.calls[0][1]!.signal!;
+  expect(signal.aborted).toBe(false);
+  view.unmount();
+  expect(signal.aborted).toBe(true);
+});
+
+test("an MP4 over the 20 s cap is converted (cut to 20 s); one under it passes through", async () => {
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  const converted = new Blob(["cut"], { type: "video/mp4" });
+  vi.mocked(convertClip).mockResolvedValue(converted);
+  vi.mocked(clipDurationS).mockResolvedValue(95);
+  const view = render(<VideoRecorder audio onDone={onDone} />);
+  const long = new File(["long"], "long.mp4", { type: "video/mp4" });
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), { target: { files: [long] } });
+  await flush();
+  expect(clipDurationS).toHaveBeenCalledWith(long);
+  expect(convertClip).toHaveBeenCalledWith(long, expect.any(Object));
+  expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ blob: converted }));
+  view.unmount();
+
+  vi.mocked(convertClip).mockClear();
+  onDone.mockReset();
+  vi.mocked(clipDurationS).mockResolvedValue(20.4);
+  render(<VideoRecorder audio onDone={onDone} />);
+  const short = new File(["short"], "short.mp4", { type: "video/mp4" });
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), { target: { files: [short] } });
+  await flush();
+  expect(convertClip).not.toHaveBeenCalled();
+  expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ blob: short }));
+});
+
+test("a clip whose length can't be read isn't converted; reading its frames decides", async () => {
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  vi.mocked(clipDurationS).mockRejectedValue(new Error("no metadata"));
+  render(<VideoRecorder audio onDone={onDone} />);
+  const file = new File(["x"], "x.mp4", { type: "video/mp4" });
+  fireEvent.change(screen.getByLabelText("Record with the camera app"), { target: { files: [file] } });
+  await flush();
+  expect(convertClip).not.toHaveBeenCalled();
+  expect(framesFromFile).toHaveBeenCalledWith(file);
 });
 
 test("a clip that can't be converted says so", async () => {

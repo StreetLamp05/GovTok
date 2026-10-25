@@ -9,8 +9,8 @@ import {
   MIN_RECORD_MS,
   VIDEO_BITS_PER_SECOND,
 } from "@/lib/media/constants";
-import { convertClip, needsConversion } from "@/lib/media/convertClip";
-import { framesFromFile, grabFrame, pickEvenly } from "@/lib/media/frames";
+import { convertClip, isTooLong, needsConversion } from "@/lib/media/convertClip";
+import { clipDurationS, framesFromFile, grabFrame, pickEvenly } from "@/lib/media/frames";
 import { pickMimeType } from "@/lib/media/mimeType";
 
 // The in-page recorder (§4.1.1) without its look: rear camera, about 720p at 1.5 Mbps, stopping
@@ -25,7 +25,7 @@ export type RecordedClip = {
 };
 // Clips from a file are passed through as they are when Groq and every phone can take them,
 // so they keep any audio track even when `audio` is false. Anything else (an iPhone .mov, a clip
-// over 25 MB) is converted first (lib/media/convertClip).
+// over 25 MB or 20 s) is converted first (lib/media/convertClip), without sound when `audio` is false.
 
 export type RecorderPhase =
   | { kind: "idle" }
@@ -62,6 +62,8 @@ export function useClipRecorder({ audio, onDone, autoOpen = false }: Options) {
   // Bumped when a file is picked, so a camera that finishes opening afterwards is closed again.
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
+  // The conversion in progress, cancelled by a newer pick or unmounting.
+  const conversionRef = useRef<AbortController | null>(null);
   const onDoneRef = useRef(onDone);
   const [phase, setPhase] = useState<RecorderPhase>({ kind: "idle" });
   const [now, setNow] = useState(0);
@@ -87,6 +89,7 @@ export function useClipRecorder({ audio, onDone, autoOpen = false }: Options) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      conversionRef.current?.abort();
       clearTimers();
       const recorder = recorderRef.current;
       if (recorder) {
@@ -216,15 +219,33 @@ export function useClipRecorder({ audio, onDone, autoOpen = false }: Options) {
     const attempt = ++attemptRef.current;
     const live = () => mountedRef.current && attempt === attemptRef.current;
     stopCamera();
-    const convert = needsConversion(file);
+    let convert = needsConversion(file);
     setPhase(convert ? { kind: "converting", progress: 0 } : { kind: "processing" });
+    conversionRef.current?.abort();
+    const controller = new AbortController();
+    conversionRef.current = controller;
+    const startConversion = () =>
+      convertClip(file, {
+        onProgress: (progress) => live() && setPhase({ kind: "converting", progress }),
+        signal: controller.signal,
+        // A fix clip (audio off) comes out silent, as it would recorded live (§4.3.1).
+        audio,
+      });
     // Started before any await, inside the tap.
-    const converted = convert
-      ? convertClip(file, { onProgress: (progress) => live() && setPhase({ kind: "converting", progress }) })
-      : Promise.resolve(file);
+    const converted = convert ? startConversion() : null;
     void (async () => {
       try {
-        const blob = await converted;
+        let blob: Blob = file;
+        if (converted) {
+          blob = await converted;
+        } else if (isTooLong(await clipDurationS(file).catch(() => 0))) {
+          // Too long to post as it is (§4.1.1). This starts after the tap, so iOS may convert it
+          // without sound. A clip whose length can't be read goes on, and framesFromFile decides.
+          if (!live()) return;
+          convert = true;
+          setPhase({ kind: "converting", progress: 0 });
+          blob = await startConversion();
+        }
         if (!live()) return;
         setPhase({ kind: "processing" });
         const frames = await framesFromFile(blob);
