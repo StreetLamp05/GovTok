@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
+import { DEMO_VALUE } from "../../../lib/demo";
 
 // Fresh module per test, like a fresh page load (the hook keeps an in-memory flag).
 async function load() {
@@ -25,7 +26,7 @@ test("ignores other demo values", async () => {
 });
 
 test("stays on after the query param is gone", async () => {
-  window.history.replaceState(null, "", "/?demo=mableton");
+  window.history.replaceState(null, "", `/?demo=${DEMO_VALUE}`);
   let useDemoMode = await load();
   expect(renderHook(() => useDemoMode()).result.current).toBe(true);
 

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
+import { ACTIVE_CITY } from "./city";
 
 // §2.1.2: Claude picks the category; this fixed table picks the owner. Claude never
-// chooses the owner. ⚠️ Streetlight and water rows are unverified (§8 "Before ship", US28).
+// chooses the owner. The table is the active city's (convex/lib/city.ts).
 
 export const CATEGORIES = [
   "pothole",
@@ -21,16 +22,7 @@ export type Owner = (typeof OWNERS)[number];
 export const categoryValidator = v.union(...CATEGORIES.map((c) => v.literal(c)));
 export const ownerValidator = v.union(...OWNERS.map((o) => v.literal(o)));
 
-export const ROUTING: Record<Category, { owner: Owner; agency: string }> = {
-  pothole: { owner: "cobb", agency: "Cobb DOT" },
-  signal_sign: { owner: "cobb", agency: "Cobb DOT" },
-  drainage: { owner: "cobb", agency: "Cobb Water System (stormwater)" },
-  water_leak: { owner: "cobb", agency: "Cobb Water System" },
-  streetlight: { owner: "utility", agency: "Georgia Power" },
-  trash_missed: { owner: "city", agency: "Mableton Sanitation" },
-  code_violation: { owner: "city", agency: "Mableton Code Enforcement" },
-  other: { owner: "unknown", agency: "Routing unclear" },
-};
+export const ROUTING: Record<Category, { owner: Owner; agency: string }> = ACTIVE_CITY.routing;
 
 export function isCategory(value: string): value is Category {
   return (CATEGORIES as readonly string[]).includes(value);
@@ -42,10 +34,11 @@ export function routeCategory(category: string): { category: Category; owner: Ow
   return { category: known, ...ROUTING[known] };
 }
 
-// Owner chip colors, from the UI prototype's ownerMeta (spec/UI_mockups).
+// Owner chip colors, from the UI prototype's ownerMeta (spec/UI_mockups). Labels are the active city's.
+const labels = ACTIVE_CITY.ownerLabels;
 export const OWNER_CHIP: Record<Owner, { label: string; dot: string; bg: string; fg: string }> = {
-  city: { label: "City of Mableton", dot: "#2DD4BF", bg: "#E3F5F2", fg: "#0F5E56" },
-  cobb: { label: "Cobb County", dot: "#60A5FA", bg: "#E7EFFD", fg: "#1E429F" },
-  utility: { label: "Utility", dot: "#FBBF24", bg: "#FDF3DC", fg: "#7A4306" },
-  unknown: { label: "Not routed", dot: "#CBD5E1", bg: "#EDF0F3", fg: "#46505C" },
+  city: { label: labels.city, dot: "#2DD4BF", bg: "#E3F5F2", fg: "#0F5E56" },
+  cobb: { label: labels.cobb, dot: "#60A5FA", bg: "#E7EFFD", fg: "#1E429F" },
+  utility: { label: labels.utility, dot: "#FBBF24", bg: "#FDF3DC", fg: "#7A4306" },
+  unknown: { label: labels.unknown, dot: "#CBD5E1", bg: "#EDF0F3", fg: "#46505C" },
 };
