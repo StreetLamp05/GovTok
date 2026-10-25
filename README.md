@@ -36,11 +36,26 @@ scripts/convex-env.sh --prod    # the production deployment
 
 ## Deploy (Vercel + Convex production)
 
-Pushes to `main` deploy to Vercel Production. `vercel.json` sets the build command to `npx convex deploy --cmd 'npm run build'`, which pushes the Convex functions to production (authenticated by `CONVEX_DEPLOY_KEY`, set in Vercel's Production environment only) and builds Next.js with that deployment's `NEXT_PUBLIC_CONVEX_URL`. Its `ignoreCommand` skips every non-production build, so preview deployments never run. Branches are tested on a laptop instead.
+Every push builds on Vercel through `scripts/vercel-build.sh` (the `buildCommand` in `vercel.json`):
 
-Server keys go on the Convex production deployment with `scripts/convex-env.sh --prod` (from the main checkout). `NEXT_PUBLIC_*` keys go in Vercel → Settings → Environment Variables.
+| Push | Vercel env | What runs |
+|---|---|---|
+| `main` (the Production Branch) | `production` | `npx convex deploy --cmd 'npm run build'`: pushes Convex functions and schema to prod (authenticated by `CONVEX_DEPLOY_KEY`), then builds Next.js against it |
+| any other branch | `preview` | `npm run build` only, against prod Convex. You get an HTTPS preview URL for phone testing. |
 
-`/dev/camera` is a dev-only page that opens the rear camera, used to check the HTTPS deploy on a phone.
+Previews read and write prod data but never push functions or schema, so parallel branches can't overwrite prod or each other. A branch's new Convex functions reach prod only when it merges, so preview pages that call them will error until then.
+
+Vercel environment variables:
+
+| Key | Production | Preview |
+|---|---|---|
+| `CONVEX_DEPLOY_KEY` | ✓ | ✗ never |
+| `NEXT_PUBLIC_CONVEX_URL` | ✗ (the build sets it) | ✓ prod Convex URL |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID` | ✓ | ✓ |
+
+Server keys go on the Convex production deployment with `scripts/convex-env.sh --prod` (from the main checkout).
+
+`/dev/camera` opens the rear camera, to check the HTTPS deploy on a phone. It ships to prod and previews, unlinked and `noindex`.
 
 ## Worktrees (parallel cards)
 
