@@ -450,7 +450,7 @@ describe("rescreen and release", () => {
     await t.mutation(internal.screeningDb.release, { reportId, force: true });
 
     const report = await read();
-    expect(report).toMatchObject({ status: "open", category: "pothole", owner: "cobb" });
+    expect(report).toMatchObject({ status: "open", category: "pothole", ...ROUTING.pothole });
     expect(report.lastActivityAt).toBeGreaterThanOrEqual(NOW);
   });
 

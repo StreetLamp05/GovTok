@@ -1,9 +1,12 @@
-// Demo location mode (§6.1.1): `?demo=mableton` swaps the phone's GPS for DEMO_POINT.
+import { ACTIVE_CITY } from "../convex/lib/city";
+
+// Demo location mode (§6.1.1): `?demo=<city id>` (`?demo=sf`) swaps the phone's GPS for DEMO_POINT.
 export const DEMO_PARAM = "demo";
-export const DEMO_VALUE = "mableton";
+export const DEMO_VALUE = ACTIVE_CITY.id;
 
 export type LatLng = { lat: number; lng: number };
 
-// Downtown Mableton, GA (the town's published center point, 33°48′57″N 84°34′57″W).
-// US25 seeds the sample reports around it.
-export const DEMO_POINT: LatLng = { lat: 33.8158, lng: -84.5825 };
+// A public street next to the venue (convex/lib/city.ts). The seeded open pothole and the
+// before/after spot sit within 50 m of it (app/admin/seed/presets.ts), so the duplicate check
+// (§4.1.2) and the fix geofence (§4.3.1) find them on stage.
+export const DEMO_POINT: LatLng = ACTIVE_CITY.demoPoint;

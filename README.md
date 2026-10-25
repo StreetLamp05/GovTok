@@ -2,6 +2,12 @@
 
 A TikTok-style feed for Mableton, GA. Residents film a problem, neighbors "me too" it, and the proof-of-fix video appears on the same card when it's resolved. The design lives in [GOVTOK_DECISIONS.md](GOVTOK_DECISIONS.md).
 
+## How we use Convex
+- Convex stores reports, residents, me-toos, fixes, and uploaded media.
+- Queries power live feed, map, report-status, and fix-status screens.
+- Mutations and actions handle posting, screening, and proof-of-fix checks.
+- See the [Cal Hacks log](hackathon.md) for details and commit history.
+
 Stack: Next.js (App Router) on Vercel, with Convex for the database, file storage, live updates and server actions.
 
 ## Fresh clone
@@ -73,6 +79,59 @@ Only the Vercel Production build holds `CONVEX_DEPLOY_KEY`.
 ## Environment variables
 
 See [.env.example](.env.example). `.env.local` is git-ignored.
+
+## Demo runbook
+
+The stage flow is in GOVTOK_DECISIONS.md §6.1.1. Everything below runs against **prod**, after the branch has merged. Add `--prod` to every `npx convex run`.
+
+The app runs as one city at a time: `ACTIVE_CITY` in `convex/lib/city.ts`. **Cal Hacks (Oct 25) runs as San Francisco**, demoed at the Palace of Fine Arts. That one constant sets the routing table (SF Public Works, SFMTA, SFPUC, PG&E, Recology), the Claude prompts, the map center, `DEMO_POINT` (Baker St beside the Palace) and the seed presets. Demo mode is `?demo=sf`.
+
+**For Mableton demo day (Oct 30):** set `ACTIVE_CITY = MABLETON`, then update the two tests pinned to Cal Hacks (`tests/convex/lib/routing.test.ts`, `tests/app/admin/seed/presets.test.ts`) and merge. Demo mode becomes `?demo=mableton`. Reports seeded under SF keep their SF agencies, so delete them or re-seed.
+
+### 1. Seed (the night before)
+
+1. Seed at least one fixer per org that will close a fix, e.g. SF Public Works. Their org is what the card shows ("Fixed by SF Public Works"):
+   `npx convex run --prod fixers:seed '{"fixers":[{"name":"Demo crew","org":"SF Public Works","passcode":"…"}]}'`
+2. On the **demo phone**, open `/admin/seed` on prod and sign in with the Convex `ADMIN_PASSCODE`. It's checked server-side on every call and never stored in the page.
+3. Add one row per California clip (or set of photos), about 8 in all.
+   - Clips must be MP4 or WebM, because Groq can't transcribe an iPhone `.MOV`. Convert one first, e.g. `ffmpeg -i IMG_1234.MOV -c:v libx264 -c:a aac clip.mp4`.
+   - Fix (*after*) clips are silent at the source (§4.3.1), so convert those without audio, including the one uploaded on stage: `ffmpeg -i IMG_1235.MOV -c:v libx264 -an after.mp4`.
+   - Each sample can sit at a preset near where it was really filmed, or at typed coordinates.
+   - **Stage: open pothole** (Baker St by the Palace). Leave it open. This is what "Is it one of these?" offers.
+   - **Stage: before/after spot** (Baker St at the lagoon). Tick "Posted by this device", upload only the *before* clip, and leave it open. Its pre-filmed *after* clip, from the same spot, gets uploaded on stage in step 3 of the stage flow. Because the phone owns it, the Me-page beat is the fix the audience just watched.
+   - **Me-page fallback.** Also tick "Posted by this device" on one other sample, attach a fix clip filmed by the seeded fixer, and backdate it (e.g. opened 23 days ago, fixed 2 days ago). The Me page then has a fixed item even if the live check fails.
+   - **The rest.** Spread them over the other presets (Marina, Mission, Sunset, Bayview…), with "Opened N days ago" set so the cards read "Open · N days".
+4. Press **Seed** once for the whole batch.
+   - Screening is staggered 10 s apart within a batch, so 8 samples take about 1.5 minutes. Wait for a batch to finish before seeding another, or the two overlap and can hit Anthropic's rate limit.
+   - The table at the bottom shows each sample go from `pending` to `open`, with Claude's title and the SF agency.
+   - A fix clip is checked by the real `verifyFix` once its report is open, and then shows `verified`.
+5. If a sample ends up `held`:
+   - `npx convex run --prod screeningDb:rescreen '{"reportId": "…"}'` screens it again. Use this for "screening failed", or one stuck on `pending`.
+   - `npx convex run --prod screeningDb:release '{"reportId": "…"}'` publishes a held report that has a title and category. Add `"force": true` if the verdict was retake, emergency or reject.
+   - A sample that was held when its fix clip was due drops the clip (the table's Fix column stays empty). Release it, then seed the fix again as a new sample.
+6. Check on the phone:
+   - The feed shows the samples with the Sample badge.
+   - The map shows them across San Francisco.
+   - Me shows the before/after spot (open) and the fallback (fixed).
+
+### 2. On stage
+
+Open the app with `?demo=sf`. The banner reads "Demo mode: location simulated", and the location is `DEMO_POINT` on Baker St, within 50 m of both stage samples. Demo mode also covers for weak GPS indoors.
+
+1. **Me too.** Post. The duplicate check offers the seeded pothole first, because it's the nearest; the before/after spot is listed after it. Tap **Me too** on the pothole.
+2. **Post live.** Post a new clip. Screening takes a few seconds, then the card is on the feed.
+3. **Before/after.**
+   - Open `/fix?demo=sf` and sign in with the SF Public Works passcode.
+   - Open the before/after sample, tap **Record fix**, then **Upload clip** with the pre-filmed *after* clip.
+   - Claude checks it against the original, and the reveal plays.
+   - In San Francisco nearly every category is city-owned, so neighbors can't confirm the fix (§4.3.2) and there's no "Is it fixed?" button on the card. A city crew closes it.
+4. **Me page.** "The pothole I posted just got fixed": the before/after spot, now fixed and highlighted.
+
+### Fallbacks
+
+- A live post stuck on "Checking…": `screeningDb:rescreen` on it.
+- A live post held by mistake: `screeningDb:release` (with `"force": true` if needed).
+- The before/after check comes back "not fixed" or "retake": upload the after clip again. If it still fails, show the pre-fixed fallback sample on the Me page instead.
 
 ## Test video transcription
 
