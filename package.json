@@ -2,10 +2,13 @@
   "name": "govtok",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "next dev",
-    "dev:backend": "convex dev",
+    "dev:backend": "scripts/with-node.sh convex dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

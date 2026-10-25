@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, renderHook } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { SoundProvider, useSoundUnlocked } from "./sound";
+import { SoundProvider, useSoundUnlocked } from "../../../lib/hooks/sound";
 
 test("starts muted, unlocks on the first tap anywhere and stays unlocked", () => {
   const { result } = renderHook(() => useSoundUnlocked(), { wrapper: SoundProvider });

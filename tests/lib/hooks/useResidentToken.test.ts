@@ -7,7 +7,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 // Fresh module per test, like a fresh page load (the hook caches the token in memory).
 async function load() {
   vi.resetModules();
-  return (await import("./useResidentToken")).useResidentToken;
+  return (await import("../../../lib/hooks/useResidentToken")).useResidentToken;
 }
 
 beforeEach(() => localStorage.clear());

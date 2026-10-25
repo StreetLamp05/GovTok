@@ -9,6 +9,12 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Convex's local backend runs "use node" actions only on the pinned Node (.nvmrc), so
+# re-run this script under it.
+if [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)" != "$(tr -d '[:space:]' < .nvmrc)" ]; then
+  exec scripts/with-node.sh "$(pwd)/scripts/worktree-setup.sh" "$@"
+fi
+
 ENV_FILE=".env.local"
 
 # The main checkout's .env.local points at the team's dev deployment; never rewrite it.
