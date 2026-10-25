@@ -4,9 +4,6 @@
 *.env
 !.env.example
 
-# Local-only list of env key names (copied into worktrees by dispatch-cards)
-ENV_KEYS.md
-
 # Local Convex deployment state (one per worktree, see scripts/worktree-setup.sh)
 .convex/
 
@@ -48,6 +45,12 @@ pnpm-debug.log*
 
 # Planning scratch (issue bodies written before `gh issue create`)
 .planning/tmp-*
+
+# User-recorded video fixtures stay local
+/scripts/fixtures/*.mp4
+/scripts/fixtures/*.webm
+/scripts/fixtures/*.mov
+/scripts/fixtures/audio-only/
 
 # OS / editor
 .DS_Store

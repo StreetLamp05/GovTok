@@ -21,10 +21,15 @@ import type * as lib_publicReport from "../lib/publicReport.js";
 import type * as lib_routing from "../lib/routing.js";
 import type * as lib_screenPrompt from "../lib/screenPrompt.js";
 import type * as lib_screening from "../lib/screening.js";
+import type * as lib_transcribe from "../lib/transcribe.js";
+import type * as lib_videoIntakeValidation from "../lib/videoIntakeValidation.js";
 import type * as placeholder from "../placeholder.js";
 import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
+import type * as videoIntake from "../videoIntake.js";
+import type * as videoIntakeAuth from "../videoIntakeAuth.js";
+import type * as videoIntakeDb from "../videoIntakeDb.js";
 import type * as stats from "../stats.js";
 
 import type {
@@ -47,10 +52,15 @@ declare const fullApi: ApiFromModules<{
   "lib/routing": typeof lib_routing;
   "lib/screenPrompt": typeof lib_screenPrompt;
   "lib/screening": typeof lib_screening;
+  "lib/transcribe": typeof lib_transcribe;
+  "lib/videoIntakeValidation": typeof lib_videoIntakeValidation;
   placeholder: typeof placeholder;
   purge: typeof purge;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
+  videoIntake: typeof videoIntake;
+  videoIntakeAuth: typeof videoIntakeAuth;
+  videoIntakeDb: typeof videoIntakeDb;
   stats: typeof stats;
 }>;
 

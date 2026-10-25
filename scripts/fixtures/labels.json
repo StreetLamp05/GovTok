@@ -1,0 +1,120 @@
+{
+  "narrated.mp4": {
+    "purpose": "Narrated source clip for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "mp4",
+    "videoCodec": "H.264 (copied from source)",
+    "audioProcessing": "Original narrated audio"
+  },
+  "narrated.webm": {
+    "purpose": "Narrated source clip for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "webm",
+    "videoCodec": "VP9",
+    "audioProcessing": "Original narrated audio encoded as Opus"
+  },
+  "near-silent.mp4": {
+    "purpose": "Near-silent audio handling for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "mp4",
+    "videoCodec": "H.264 (copied from source)",
+    "audioProcessing": "Digital silence (FFmpeg volume=0), encoded as AAC"
+  },
+  "near-silent.webm": {
+    "purpose": "Near-silent audio handling for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "webm",
+    "videoCodec": "VP9",
+    "audioProcessing": "Digital silence (FFmpeg volume=0), encoded as Opus"
+  },
+  "sample-IMG_6372.mp4": {
+    "purpose": "Local vertical sample fixture",
+    "source": "IMG_6372.MOV",
+    "durationSeconds": 2.1,
+    "orientation": "portrait (90-degree rotation applied)",
+    "candidateCategory": "code_violation",
+    "candidateVerdict": "pass",
+    "expectedCategory": null,
+    "expectedVerdict": null,
+    "labelStatus": "needs-human-confirmation",
+    "note": "Discarded furniture appears to obstruct a sidewalk; confirm reportability and screening verdict.",
+    "groqAudioOnlyTest": {
+      "mp4Characters": 31,
+      "mp4Segments": 1,
+      "webmCharacters": 31,
+      "webmSegments": 1
+    }
+  },
+  "sample-IMG_6374.mp4": {
+    "purpose": "Local vertical sample fixture",
+    "source": "IMG_6374.MOV",
+    "durationSeconds": 4.4,
+    "orientation": "portrait (90-degree rotation applied)",
+    "candidateCategory": "code_violation",
+    "candidateVerdict": "retake",
+    "expectedCategory": null,
+    "expectedVerdict": null,
+    "labelStatus": "needs-human-confirmation",
+    "note": "Construction materials obstruct the sidewalk; a vehicle plate may be visible, so verify whether it is readable.",
+    "groqAudioOnlyTest": {
+      "mp4Characters": 84,
+      "mp4Segments": 1,
+      "webmCharacters": 83,
+      "webmSegments": 1
+    }
+  },
+  "sample-IMG_6375.mp4": {
+    "purpose": "Local vertical sample fixture",
+    "source": "IMG_6375.MOV",
+    "durationSeconds": 5.43,
+    "orientation": "portrait (90-degree rotation applied)",
+    "candidateCategory": "signal_sign",
+    "candidateVerdict": "pass",
+    "expectedCategory": null,
+    "expectedVerdict": null,
+    "labelStatus": "needs-human-confirmation",
+    "note": "Traffic signal and street scene; confirm what specific public-space problem is being reported.",
+    "groqAudioOnlyTest": {
+      "mp4Characters": 74,
+      "mp4Segments": 1,
+      "webmCharacters": 74,
+      "webmSegments": 1
+    }
+  },
+  "sample-IMG_6376.mp4": {
+    "purpose": "Local vertical sample fixture",
+    "source": "IMG_6376.MOV",
+    "durationSeconds": 3.81,
+    "orientation": "portrait (90-degree rotation applied)",
+    "candidateCategory": "trash_missed",
+    "candidateVerdict": "pass",
+    "expectedCategory": null,
+    "expectedVerdict": null,
+    "labelStatus": "needs-human-confirmation",
+    "note": "Accumulated litter is visible; confirm category and any audio-based mute condition.",
+    "groqAudioOnlyTest": {
+      "mp4Characters": 70,
+      "mp4Segments": 1,
+      "webmCharacters": 71,
+      "webmSegments": 1
+    }
+  },
+  "sample-IMG_6377.mp4": {
+    "purpose": "Local vertical sample fixture",
+    "source": "IMG_6377.MOV",
+    "durationSeconds": 6.63,
+    "orientation": "portrait (90-degree rotation applied)",
+    "candidateCategory": "signal_sign",
+    "candidateVerdict": "pass",
+    "expectedCategory": null,
+    "expectedVerdict": null,
+    "labelStatus": "needs-human-confirmation",
+    "note": "Traffic signal and street scene; confirm what specific public-space problem is being reported.",
+    "groqAudioOnlyTest": {
+      "mp4Characters": 72,
+      "mp4Segments": 1,
+      "webmCharacters": 73,
+      "webmSegments": 1
+    }
+  }
+}
