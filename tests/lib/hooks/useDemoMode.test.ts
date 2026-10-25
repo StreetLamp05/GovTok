@@ -5,7 +5,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 // Fresh module per test, like a fresh page load (the hook keeps an in-memory flag).
 async function load() {
   vi.resetModules();
-  return (await import("./useDemoMode")).useDemoMode;
+  return (await import("../../../lib/hooks/useDemoMode")).useDemoMode;
 }
 
 beforeEach(() => {

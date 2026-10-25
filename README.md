@@ -6,7 +6,7 @@ Stack: Next.js (App Router) on Vercel, with Convex for the database, file storag
 
 ## Fresh clone
 
-Requires Node 20+ and npm.
+Requires Node 24 (pinned in `.nvmrc`) and npm. Convex's local backend runs `"use node"` actions only on Node 20, 22 or 24. If your system Node is a different version, install [nvm](https://github.com/nvm-sh/nvm) and run `nvm install 24`. `npm run dev` and `scripts/worktree-setup.sh` then switch to Node 24 on their own, through `scripts/with-node.sh`. For other Convex commands, prefix them: `scripts/with-node.sh npx convex dev --once`.
 
 ```bash
 npm install
