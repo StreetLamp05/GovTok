@@ -4,15 +4,12 @@
 *.env
 !.env.example
 
-<<<<<<< Updated upstream
-=======
 # Local-only list of env key names (copied into worktrees by dispatch-cards)
 ENV_KEYS.md
 
 # Local Convex deployment state (one per worktree, see scripts/worktree-setup.sh)
 .convex/
 
->>>>>>> Stashed changes
 # Dependencies
 node_modules/
 .pnp
