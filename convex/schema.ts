@@ -9,4 +9,29 @@ export default defineSchema({
     label: v.string(),
     count: v.number(),
   }),
+  videoIntake: defineTable({
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    fileSize: v.number(),
+    status: v.union(
+      v.literal("uploaded"),
+      v.literal("transcribing"),
+      v.literal("complete"),
+      v.literal("failed"),
+    ),
+    transcript: v.optional(v.string()),
+    segments: v.optional(
+      v.array(
+        v.object({
+          start: v.number(),
+          end: v.number(),
+          text: v.string(),
+        }),
+      ),
+    ),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_created_at", ["createdAt"]),
 });

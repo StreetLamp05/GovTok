@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as lib_transcribe from "../lib/transcribe.js";
+import type * as lib_videoIntakeValidation from "../lib/videoIntakeValidation.js";
 import type * as placeholder from "../placeholder.js";
+import type * as videoIntake from "../videoIntake.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +20,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "lib/transcribe": typeof lib_transcribe;
+  "lib/videoIntakeValidation": typeof lib_videoIntakeValidation;
   placeholder: typeof placeholder;
+  videoIntake: typeof videoIntake;
 }>;
 
 /**

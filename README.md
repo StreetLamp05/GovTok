@@ -48,3 +48,15 @@ Only the Vercel Production build holds `CONVEX_DEPLOY_KEY`.
 ## Environment variables
 
 See [.env.example](.env.example). `.env.local` is git-ignored.
+
+## Test video transcription
+
+Set `GROQ_API_KEY` on the Convex deployment, then run `npm run dev` and open
+`/admin/video-intake`. Choose an MP4 or WebM video up to 25 MB and select
+**Upload and transcribe**. The page uploads the file to Convex storage, records
+it in the `videoIntake` table, sends it to Groq Whisper, and shows the transcript
+and timestamped segments. The intake status and any transcription error are
+saved in the same table.
+
+This is an open test page for development, not a protected production upload
+flow. Do not use it for private or sensitive videos.
