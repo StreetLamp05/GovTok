@@ -1,0 +1,30 @@
+{
+  "narrated.mp4": {
+    "purpose": "Narrated source clip for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "mp4",
+    "videoCodec": "H.264 (copied from source)",
+    "audioProcessing": "Original narrated audio"
+  },
+  "narrated.webm": {
+    "purpose": "Narrated source clip for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "webm",
+    "videoCodec": "VP9",
+    "audioProcessing": "Original narrated audio encoded as Opus"
+  },
+  "near-silent.mp4": {
+    "purpose": "Near-silent audio handling for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "mp4",
+    "videoCodec": "H.264 (copied from source)",
+    "audioProcessing": "Digital silence (FFmpeg volume=0), encoded as AAC"
+  },
+  "near-silent.webm": {
+    "purpose": "Near-silent audio handling for Groq transcription testing",
+    "source": "IMG_6369.mp4",
+    "format": "webm",
+    "videoCodec": "VP9",
+    "audioProcessing": "Digital silence (FFmpeg volume=0), encoded as Opus"
+  }
+}

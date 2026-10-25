@@ -3,6 +3,7 @@ import { transcribe } from "./transcribe";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("transcribe", () => {
@@ -65,6 +66,29 @@ describe("transcribe", () => {
     await expect(
       transcribe(new Blob(["video"]), "video/webm", "clip.webm", "test-key"),
     ).rejects.toThrow("Groq transcription failed (429). Retry after 30 seconds. rate limited");
+  });
+
+  it("accepts an empty transcript for a silent clip", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: "", segments: [] }), { status: 200 })),
+    );
+
+    await expect(
+      transcribe(new Blob(["silent video"]), "video/mp4", "near-silent.mp4", "test-key"),
+    ).resolves.toEqual({ text: "", segments: [] });
+  });
+
+  it("supports the US11 two-argument caller signature", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: "Hello." }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+
+    await transcribe(new Blob(["video"]), "video/webm");
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const form = request.body as FormData;
+    expect((form.get("file") as File).name).toBe("audio.webm");
   });
 
   it("rejects unsupported formats before calling Groq", async () => {

@@ -47,6 +47,10 @@ pnpm-debug.log*
 # Planning scratch (issue bodies written before `gh issue create`)
 .planning/tmp-*
 
+# User-recorded video fixtures stay local
+/scripts/fixtures/*.mp4
+/scripts/fixtures/*.webm
+
 # OS / editor
 .DS_Store
 Thumbs.db

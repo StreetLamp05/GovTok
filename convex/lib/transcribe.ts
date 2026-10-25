@@ -35,7 +35,7 @@ function isTranscriptSegment(value: unknown): value is TranscriptSegment {
 export async function transcribe(
   blob: Blob,
   contentType: string,
-  fileName: string,
+  fileName = `audio.${extensionFor(contentType)}`,
   apiKey = process.env.GROQ_API_KEY,
 ): Promise<Transcription> {
   const extension = extensionFor(contentType);

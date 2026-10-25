@@ -84,3 +84,14 @@ saved in the same table.
 
 This is an open test page for development, not a protected production upload
 flow. Do not use it for private or sensitive videos.
+
+To run the Groq checks against the local US11 clips, make sure the Convex CLI
+is logged in and the selected deployment has `GROQ_API_KEY`, then run:
+
+```bash
+node --experimental-strip-types scripts/try-transcribe.ts
+```
+
+The script reads the key from Convex without printing it and sends each fixture
+to Groq. The video files in `scripts/fixtures/` are local-only and git-ignored;
+`labels.json` records how the test versions were made.
