@@ -1,4 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "scripts/vercel-build.sh"
+  "framework": "nextjs",
+  "buildCommand": "npx convex deploy --cmd 'npm run build'",
+  "ignoreCommand": "[ \"$VERCEL_ENV\" != production ]"
 }
