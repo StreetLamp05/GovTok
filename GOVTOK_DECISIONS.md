@@ -510,7 +510,7 @@ Updated incrementally as decisions are locked in.
 ## Next steps (build)
 1. **Scaffold:** Next.js App Router + Convex. Deploy to Vercel immediately so camera access works over HTTPS (§1.1.1).
 2. **Keys:** Google Maps browser key + Geocoding key (§1.1.2), `ANTHROPIC_API_KEY` and `GROQ_API_KEY` in Convex env (§1.1.3, §1.1.4).
-3. **Schema:** `reports`, `meToos`, `residents`, `fixers` (§2.1.1), with `by_lastActivity` for the feed and `by_status_lat` for bounding-box queries (a lat range on the index, then a lng filter). One location index is enough at Mableton's scale (§1.1.1).
+3. **Schema:** `reports`, `meToos`, `residents`, `fixers`, `fixAttempts` (§2.1.1). Indexes: `lastActivityAt` for the feed (the one index of §5.1.2; the query filters to `open` / `fixed`), and `status`+`lat` for bounding-box queries.
 4. **Pipeline:** upload → frames, transcript or photos → one Claude call (structured JSON) → verdict → status (§1.1.3, §4.2.1). Then the fix check (§4.3.1).
 5. **Surfaces** (partner, from wireframes): feed + reveal (§5.1), map (§5.2), `/fix` (§5.3), Me page (§5.4), capture screens (§4.1).
 6. **Demo:** seed action + `?demo=mableton` (§6.1.1). Film the before/after pairs.
