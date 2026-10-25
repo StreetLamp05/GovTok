@@ -4,6 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { type ReactNode, StrictMode, useLayoutEffect, useState } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { MapReport } from "../../../convex/map";
+import { DEMO_VALUE } from "../../../lib/demo";
 
 // A fake map and clusterer that record what ReportsMap does with them. Markers are plain
 // objects with a title and a `map`, like AdvancedMarkerElement.
@@ -66,7 +67,7 @@ vi.mock("../../../lib/demo", async (importOriginal) => ({
   DEMO_POINT: h.seedsPoint,
 }));
 
-const { default: ReportsMap, MABLETON_CENTER } = await import("../../../components/map/ReportsMap");
+const { default: ReportsMap, CITY_CENTER } = await import("../../../components/map/ReportsMap");
 
 const report = (id: string, status: MapReport["status"], meTooCount: number, lat = 33.81, isSample = false) =>
   ({ _id: id, lat, lng: -84.58, status, meTooCount, title: id, category: "pothole", isSample }) as MapReport;
@@ -191,10 +192,10 @@ test("no 'you' dot where the Permissions API is missing", async () => {
   expect(screen.queryByTitle("You are here")).toBeNull();
 });
 
-test("centers on Mableton, not on DEMO_POINT, outside demo mode", () => {
+test("centers on the active city, not on DEMO_POINT, outside demo mode", () => {
   render(<ReportsMap reports={REPORTS} focusId={null} onOpen={onOpen} />);
 
-  expect(h.map.setCenter).toHaveBeenLastCalledWith(MABLETON_CENTER);
+  expect(h.map.setCenter).toHaveBeenLastCalledWith(CITY_CENTER);
   expect(h.map.setZoom).toHaveBeenLastCalledWith(13);
 });
 
@@ -213,13 +214,13 @@ test("leaving /map?report=<id> for the plain map returns to the city view", () =
 
   rerender(<ReportsMap reports={REPORTS} focusId={null} onOpen={onOpen} />);
 
-  expect(h.map.setCenter).toHaveBeenLastCalledWith(MABLETON_CENTER);
+  expect(h.map.setCenter).toHaveBeenLastCalledWith(CITY_CENTER);
   expect(h.map.setZoom).toHaveBeenLastCalledWith(13);
 });
 
 // Last: demo mode sticks for the rest of the module once it's seen in the URL.
 test("centers on DEMO_POINT in demo mode", () => {
-  window.history.replaceState(null, "", "/map?demo=mableton");
+  window.history.replaceState(null, "", `/map?demo=${DEMO_VALUE}`);
   render(<ReportsMap reports={REPORTS} focusId={null} onOpen={onOpen} />);
 
   expect(h.map.setCenter).toHaveBeenLastCalledWith(SEEDS_POINT);

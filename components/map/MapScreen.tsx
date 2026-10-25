@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { ACTIVE_CITY } from "../../convex/lib/city";
 import { api } from "../../convex/_generated/api";
 import { useDemoMode } from "../../lib/hooks/useDemoMode";
 import { clusterCount, MIXED_COLOR, STATUS_COLOR, type MapStatus } from "./counts";
@@ -40,7 +41,7 @@ export default function MapScreen() {
       <div className="absolute inset-x-3 top-3 flex flex-col gap-2.5 rounded-2xl bg-white py-3 pr-3 pl-3.5 shadow-[0_4px_18px_rgba(15,30,51,.16)]">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h1 className="text-base font-extrabold text-[#0F1E33]">Problems in Mableton</h1>
+            <h1 className="text-base font-extrabold text-[#0F1E33]">Problems in {ACTIVE_CITY.name}</h1>
             <p className="mt-0.5 text-xs font-medium text-[#4A5A6E]">
               {reports === undefined
                 ? "Loading…"

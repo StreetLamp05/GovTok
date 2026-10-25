@@ -1,6 +1,7 @@
 import type { Infer } from "convex/values";
 import type { verdictValidator } from "../schema";
 import { callClaudeJSON, ClaudeError, imageBlock, type ImageInput } from "./claude";
+import { ACTIVE_CITY } from "./city";
 import { CATEGORIES, routeCategory, type Category } from "./routing";
 
 // Screening and card fill-in in one Claude call (§1.1.3). The policy is §4.2.1, the
@@ -20,7 +21,7 @@ export type ScreenInput = {
 };
 export type ScreenResult = { verdict: Verdict; reason: string; category: Category; title: string };
 
-export const SCREEN_SYSTEM = `You screen posts for GovTok, a public feed where residents of Mableton, Georgia film problems in public space (potholes, broken signals, flooding, leaks, dark streetlights, missed trash, illegal dumping) so the responsible agency fixes them. Your verdict is applied automatically, with no human review.
+export const SCREEN_SYSTEM = `You screen posts for GovTok, a public feed where residents of ${ACTIVE_CITY.place} film problems in public space (potholes, broken signals, flooding, leaks, dark streetlights, missed trash, illegal dumping) so the responsible agency fixes them. Your verdict is applied automatically, with no human review.
 
 Each post gives you images: about 6 frames from a short video in order, or 1 to 10 photos. It may also include a transcript of the video's audio, a description the poster wrote, and the street from reverse geocoding.
 
