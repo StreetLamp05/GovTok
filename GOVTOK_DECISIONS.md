@@ -322,6 +322,9 @@ Updated incrementally as decisions are locked in.
 - Fixers are **not** limited to their own org's reports. A city crew can close a Cobb report it sees fixed. This settles §3.1.2's forward reference.
 - Card label: "Fix confirmed by a neighbor · Cobb DOT" when closed by a resident, "Fixed by Mableton Sanitation" when closed by a fixer.
 - Data: `fixedBy` holds either a fixer ID or a resident ID, plus `fixedByKind: fixer | resident` (an addition to §2.1.1).
+- Known weaknesses, accepted for the hackathon (2026-10-25, US23):
+  - The 50 m check, in the client and again in `submitFix`, trusts the coordinates the phone sends. Report locations are public (§7.1.1), so anyone can claim to be at one. Demo mode relies on exactly this (§6.1.1). What actually gates a fix is Claude's same-spot, problem-resolved check (§4.3.1), not the geofence.
+  - There's no limit on fix attempts, and each one is a Claude call.
 - Rationale: most reports (roads, stormwater, water, streetlights) aren't the city's. Without this, the most relatable reveal (a pothole) could never happen. It reuses the §4.3.1 code with one extra entry point, and it shows the community holding the county to account. The weak resident identity (§3.1.1) is acceptable because the geofence and Claude's check gate the result, not the identity.
 - Rejected:
   - Never closing reports the city doesn't own: a pointed story, but potholes could never show a fix.
@@ -368,6 +371,7 @@ Updated incrementally as decisions are locked in.
 - `/fix` asks for the passcode once (§3.1.2). Then it lists `open` reports nearest first: thumbnail, title, owner chip, days open, me-too count. All owners are listed (§4.3.2).
 - Tap a report to watch the original, then **Record fix**, which enables only within 50 m. Then "Checking…", then `verified` or a retake with Claude's reason (§4.3.1).
 - Neighbors confirming fixes reuse the same capture and check screens, reached from "Is it fixed?" on a card (§4.3.2).
+  - Route (2026-10-25, US23): "Is it fixed?" opens `/confirm/<reportId>`, which shows the report's thumbnail, title and owner chip above the same capture screen. It has no tab bar, like `/fix`.
 
 ### 5.4 Me page
 
@@ -457,6 +461,7 @@ Updated incrementally as decisions are locked in.
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
 - A limit on fixer passcode guesses (§3.1.2)
+- A limit on proof-of-fix attempts per person and report, since each is a Claude call, plus a geofence that doesn't trust client-sent coordinates (§4.3.2)
 - Real resident identity for the pilot (Google sign-in or phone) so me-too counts can be trusted (§3.1.1)
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)
