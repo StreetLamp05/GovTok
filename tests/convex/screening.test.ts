@@ -4,7 +4,7 @@ import { api, internal } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { ClaudeError } from "../../convex/lib/claude";
 import { ROUTING, type Category } from "../../convex/lib/routing";
-import { SCREENING_FAILED_REASON } from "../../convex/lib/screening";
+import { MAX_SCREENING_ERROR_LENGTH, SCREENING_FAILED_REASON } from "../../convex/lib/screening";
 import type { ScreenResult } from "../../convex/lib/screenPrompt";
 import { RETRY_DELAY_MS } from "../../convex/screening";
 import schema from "../../convex/schema";
@@ -298,8 +298,22 @@ describe("screenReport retry", () => {
     expect(screenPost).toHaveBeenCalledTimes(2);
     expect((await scheduled()).map((s) => s.state.kind)).toEqual(["success"]);
     const report = await read();
-    expect(report).toMatchObject({ status: "held", reason: SCREENING_FAILED_REASON });
+    // The error is kept for the poster's debug line (US14).
+    expect(report).toMatchObject({
+      status: "held",
+      reason: SCREENING_FAILED_REASON,
+      screeningError: "Claude request failed (500)",
+    });
     expect(report.verdict).toBeUndefined();
+  });
+
+  test("keeps only the first 500 characters of a long error", async () => {
+    screenPost.mockRejectedValue(new Error("x".repeat(2000)));
+    const { screen, read, runScheduled } = await setup();
+    await screen();
+    await runScheduled();
+    expect(MAX_SCREENING_ERROR_LENGTH).toBe(500);
+    expect((await read()).screeningError).toBe("x".repeat(500));
   });
 
   test("a transcription failure on both tries holds the report without calling Claude", async () => {
@@ -310,7 +324,11 @@ describe("screenReport retry", () => {
 
     expect(transcribe).toHaveBeenCalledTimes(2);
     expect(screenPost).not.toHaveBeenCalled();
-    expect(await read()).toMatchObject({ status: "held", reason: SCREENING_FAILED_REASON });
+    expect(await read()).toMatchObject({
+      status: "held",
+      reason: SCREENING_FAILED_REASON,
+      screeningError: "Groq transcription failed (500).",
+    });
   });
 
   test("a missing frame file counts as an error", async () => {
@@ -339,6 +357,15 @@ describe("rescreen and release", () => {
 
     await runScheduled();
     expect(await read()).toMatchObject({ status: "open", verdict: "pass" });
+  });
+
+  test("rescreen clears a failed screening's error, so the debug line can't show a stale one", async () => {
+    const { t, reportId, read } = await setup({ status: "held" });
+    await t.run((ctx) =>
+      ctx.db.patch(reportId, { reason: SCREENING_FAILED_REASON, screeningError: "Claude request failed (500)" }),
+    );
+    await t.mutation(internal.screeningDb.rescreen, { reportId });
+    expect((await read()).screeningError).toBeUndefined();
   });
 
   test.each(["open", "fixed"] as const)("rescreen refuses a %s report", async (status) => {

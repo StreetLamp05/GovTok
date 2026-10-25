@@ -1,10 +1,9 @@
 import { ConvexError, v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { findResident, getOrCreateResident } from "./lib/auth";
-import { MAX_CLIP_BYTES } from "./lib/clipLimit";
-import { CLIP_TOO_BIG, MAX_DESCRIPTION_LENGTH, MAX_PHOTOS, MAX_VIDEO_FRAMES } from "./lib/postLimits";
+import { MAX_DESCRIPTION_LENGTH } from "./lib/postLimits";
+import { checkPostMedia } from "./lib/postMedia";
 import { ownerReport } from "./lib/publicReport";
 import { mediaTypeValidator } from "./schema";
 
@@ -32,21 +31,7 @@ export const createReport = mutation({
       throw new ConvexError("That location isn't valid.");
     }
 
-    const frames = args.frameStorageIds;
-    if (args.mediaType === "video") {
-      if (!args.clipStorageId) throw new ConvexError("A video post needs its clip.");
-      if (frames.length < 1 || frames.length > MAX_VIDEO_FRAMES) {
-        throw new ConvexError(`A video post needs 1 to ${MAX_VIDEO_FRAMES} frames.`);
-      }
-      const clipSize = await storedSize(ctx, args.clipStorageId, "video");
-      if (clipSize > MAX_CLIP_BYTES) throw new ConvexError(CLIP_TOO_BIG);
-    } else {
-      if (args.clipStorageId) throw new ConvexError("A photo post can't have a clip.");
-      if (frames.length < 1 || frames.length > MAX_PHOTOS) {
-        throw new ConvexError(`A photo post needs 1 to ${MAX_PHOTOS} photos.`);
-      }
-    }
-    await Promise.all(frames.map((id) => storedSize(ctx, id, "image")));
+    await checkPostMedia(ctx, args);
 
     const now = Date.now();
     const reportId = await ctx.db.insert("reports", {
@@ -54,7 +39,7 @@ export const createReport = mutation({
       mediaType: args.mediaType,
       description,
       clipStorageId: args.clipStorageId,
-      frameStorageIds: frames,
+      frameStorageIds: args.frameStorageIds,
       lat: args.lat,
       lng: args.lng,
       status: "pending",
@@ -69,17 +54,6 @@ export const createReport = mutation({
     return reportId;
   },
 });
-
-// Throws unless the upload exists and is the right kind of file. An upload sent without a
-// Content-Type has no type to check, so only a wrong type is refused.
-async function storedSize(ctx: MutationCtx, id: Id<"_storage">, kind: "video" | "image"): Promise<number> {
-  const file = await ctx.db.system.get(id);
-  if (!file) throw new ConvexError("An uploaded file is missing. Try posting again.");
-  if (file.contentType && !file.contentType.startsWith(`${kind}/`)) {
-    throw new ConvexError(kind === "video" ? "The clip isn't a video file." : "A photo or frame isn't an image file.");
-  }
-  return file.size;
-}
 
 // The poster's own report, for the Checking… screen (§4.2.1): null unless the token's
 // resident posted it (§7.1.1), so another device can't read a held clip or its reason.

@@ -59,6 +59,10 @@ export default defineSchema({
     status: reportStatusValidator,
     verdict: v.optional(verdictValidator),
     reason: v.optional(v.string()),
+    // "screening failed" holds (§4.2.1): the last error, shown to the poster for debugging,
+    // and how many Try again taps are used (capped at MAX_SCREENING_RETRIES).
+    screeningError: v.optional(v.string()),
+    screeningRetries: v.optional(v.number()),
     audioMuted: v.boolean(),
     isSample: v.boolean(),
     meTooCount: v.number(),
