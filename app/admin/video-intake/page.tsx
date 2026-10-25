@@ -5,9 +5,9 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
+import { MAX_CLIP_BYTES } from "@/convex/lib/clipLimit";
 import { normalizeMimeType } from "@/lib/media/mimeType";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
 type InputMode = "record" | "file";
 
 export default function VideoIntakePage() {
@@ -70,7 +70,7 @@ export default function VideoIntakePage() {
       if (contentType !== "video/mp4" && contentType !== "video/webm") {
         throw new Error("Choose an MP4 or WebM video.");
       }
-      if (blob.size === 0 || blob.size > MAX_FILE_SIZE) {
+      if (blob.size === 0 || blob.size > MAX_CLIP_BYTES) {
         throw new Error("Choose a video larger than 0 bytes and no larger than 25 MB.");
       }
 

@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+import { MAX_CLIP_BYTES } from "./clipLimit";
 
 declare const process: { env: { GROQ_API_KEY?: string } };
 
@@ -40,7 +40,7 @@ export async function transcribe(
 ): Promise<Transcription> {
   const extension = extensionFor(contentType);
   if (blob.size === 0) throw new Error("The uploaded video is empty.");
-  if (blob.size > MAX_FILE_SIZE) throw new Error("Videos must be 25 MB or smaller.");
+  if (blob.size > MAX_CLIP_BYTES) throw new Error("Videos must be 25 MB or smaller.");
   if (!apiKey) throw new Error("GROQ_API_KEY is not set in the Convex environment.");
 
   const form = new FormData();
