@@ -77,6 +77,7 @@ The main checkout stays on whatever branch it's on.
 
 Then prepare the worktree, which doesn't have the main checkout's untracked files:
 - Copy every ignored env file: `git ls-files --others --ignored --exclude-standard | grep -E '(^|/)\.env(\.local)?$' | grep -v node_modules` → same relative path in the worktree.
+- Copy `ENV_KEYS.md` (the local-only list of env key names; never committed) to the worktree root if it exists.
 - Install dependencies from the lockfile inside the worktree (`npm ci`, or the repo's package manager equivalent).
 
 ## 8. Launch the runners in tmux

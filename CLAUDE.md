@@ -5,6 +5,9 @@
 - GitHub Project #16 (owner `StreetLamp05`, https://github.com/users/StreetLamp05/projects/16) is the execution board. Issues are the **work slice** of the spec, not a restatement of it (see the translation rule below).
 - Stack (spec §1.1.1): Next.js (App Router) on Vercel, with Convex for the database, file storage, live updates, and server actions that call Claude.
 
+## Environment keys
+- `ENV_KEYS.md` (local only, never committed; copied into worktrees by `dispatch-cards`) lists every env key name, where it lives (`.env.local`, Convex env, Vercel) and what sets it. Read that file, never `.env.local`. To check a key exists without seeing its value: `grep -q '^NAME=' .env.local`.
+
 ## Card hierarchy
 - **Feature** issues have the label `feature` and the title `F<N>: <name>`.
 - **User story** issues have the label `user-story` and are linked as native GitHub sub-issues under their parent Feature (`gh issue create --parent <F-number>`).
