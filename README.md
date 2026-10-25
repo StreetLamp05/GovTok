@@ -2,6 +2,12 @@
 
 A TikTok-style feed for Mableton, GA. Residents film a problem, neighbors "me too" it, and the proof-of-fix video appears on the same card when it's resolved. The design lives in [GOVTOK_DECISIONS.md](GOVTOK_DECISIONS.md).
 
+## How we use Convex
+- Convex stores reports, residents, me-toos, fixes, and uploaded media.
+- Queries power live feed, map, report-status, and fix-status screens.
+- Mutations and actions handle posting, screening, and proof-of-fix checks.
+- See the [Cal Hacks log](hackathon.md) for details and commit history.
+
 Stack: Next.js (App Router) on Vercel, with Convex for the database, file storage, live updates and server actions.
 
 ## Fresh clone
