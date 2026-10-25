@@ -29,6 +29,7 @@ scripts/convex-env.sh --prod    # the production deployment
 |---|---|
 | `npm run dev` | Next.js and Convex together |
 | `npm test` | Vitest + `convex-test` for Convex functions |
+| `npm run test:browser` | Media tests in headless Chromium (`tests/browser/`). First run: `npx playwright install chromium` |
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Type check |
 | `npm run build` | Production build |
