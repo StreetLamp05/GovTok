@@ -5,8 +5,10 @@ import { ConvexError } from "convex/values";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CameraCapture from "@/components/capture/CameraCapture";
+import LocationPicker from "@/components/map/LocationPicker";
 import NearbyCheck from "@/components/post/NearbyCheck";
 import { api } from "@/convex/_generated/api";
+import { ACTIVE_CITY } from "@/convex/lib/city";
 import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_CLIP_BYTES } from "@/convex/lib/clipLimit";
 import { CLIP_TOO_BIG, MAX_DESCRIPTION_LENGTH } from "@/convex/lib/postLimits";
@@ -28,10 +30,8 @@ type Mode = Draft["kind"];
 
 const SUBMIT_ERROR = "We couldn't send your post. Check your connection and try again.";
 const HINTS = {
-  // An uploaded clip is pinned to the phone's location now too, not where it was filmed (§4.1.1).
-  video: "Film the problem for up to 20 seconds. Say what's wrong if you like. An upload is pinned to where you are now.",
-  // Re-encoding strips each photo's GPS, so the pin is the phone's location now (§4.1.1).
-  photos: "Up to 10 photos. Your post is pinned to where you are now, so post from where the problem is.",
+  video: "Film the problem for up to 20 seconds. Say what's wrong if you like. Posts use your current location unless you choose a pin first.",
+  photos: "Up to 10 photos. Posts use your current location unless you choose a pin first.",
 };
 
 export default function PostFlow() {
@@ -40,10 +40,13 @@ export default function PostFlow() {
   const residentToken = useResidentToken();
   const createReport = useMutation(api.posts.createReport);
   const [mode, setMode] = useState<Mode>("video");
+  const [selectedPoint, setSelectedPoint] = useState<LatLng | null>(null);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [choosingLocation, setChoosingLocation] = useState(false);
   const nearbyReports = useQuery(
     api.nearby.nearbyOpen,
-    location.status === "ready" && residentToken
-      ? { lat: location.point.lat, lng: location.point.lng, token: residentToken }
+    locationConfirmed && selectedPoint && residentToken
+      ? { lat: selectedPoint.lat, lng: selectedPoint.lng, token: residentToken }
       : "skip",
   );
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -85,11 +88,8 @@ export default function PostFlow() {
       clip,
       clipUrl: URL.createObjectURL(clip.blob),
       posterUrl: clip.frames[0] ? URL.createObjectURL(clip.frames[0]) : undefined,
-      // Capture only shows once there's a fix, so this is set in practice.
-      point: location.status === "ready" ? location.point : null,
+      point: selectedPoint,
     });
-    // A more accurate fix while they type. If it fails, the fix from filming is used.
-    location.refresh();
   }
 
   function picked(photos: Blob[]) {
@@ -98,12 +98,11 @@ export default function PostFlow() {
       kind: "photos",
       photos,
       photoUrls: photos.map((photo) => URL.createObjectURL(photo)),
-      point: location.status === "ready" ? location.point : null,
+      point: selectedPoint,
     });
-    location.refresh();
   }
 
-  const point = location.status === "ready" ? location.point : (draft?.point ?? null);
+  const point = draft?.point ?? selectedPoint;
 
   async function submit() {
     if (!draft || submitting || !point) return;
@@ -141,7 +140,32 @@ export default function PostFlow() {
   if (reportId) return <CheckingScreen reportId={reportId} onPostAnother={startOver} />;
 
   if (!draft) {
-    if (location.status !== "ready") return <LocationGate location={location} />;
+    if (!locationConfirmed) {
+      if (choosingLocation) {
+        return (
+          <LocationPicker
+            initialPoint={selectedPoint ?? (location.status === "ready" ? location.point : ACTIVE_CITY.center)}
+            onConfirm={(point) => {
+              setSelectedPoint(point);
+              setLocationConfirmed(true);
+              setChoosingLocation(false);
+            }}
+            onCancel={() => setChoosingLocation(false)}
+          />
+        );
+      }
+      return (
+        <LocationGate
+          location={location}
+          onUseCurrent={() => {
+            if (location.status !== "ready") return;
+            setSelectedPoint(location.point);
+            setLocationConfirmed(true);
+          }}
+          onChooseMap={() => setChoosingLocation(true)}
+        />
+      );
+    }
     if (!residentToken || nearbyReports === undefined) {
       return (
         <main className="flex flex-col gap-4 p-6" aria-busy="true">
@@ -241,32 +265,54 @@ export default function PostFlow() {
   );
 }
 
-// Reports are pinned to the phone's location when posting (where a live clip is filmed; an
-// upload or slideshow may differ, §4.1.1), so posting waits for a location (§7.1.1).
-function LocationGate({ location }: { location: LocationState & { refresh: () => void } }) {
+// GPS is the default report pin, but a manually selected map point also works without GPS (§4.1.1).
+function LocationGate({
+  location,
+  onUseCurrent,
+  onChooseMap,
+}: {
+  location: LocationState & { refresh: () => void };
+  onUseCurrent: () => void;
+  onChooseMap: () => void;
+}) {
   return (
     <main className="flex flex-col gap-4 p-6">
       <h1 className="text-2xl font-extrabold">Post a problem</h1>
-      {location.status === "loading" ? (
-        <p className="text-[#4A5A6E]">Finding your location…</p>
-      ) : (
-        <div role="alert" className="rounded-lg border border-[#F5C2C0] bg-[#FDECEC] p-4 text-[#8A1C1C]">
-          <p className="font-bold">
-            {location.status === "denied" ? "Location is turned off for GovTok" : "We couldn't find your location"}
-          </p>
-          <p className="mt-1 text-sm">
-            {location.status === "denied"
-              ? "Reports are pinned to where they were filmed. Allow location for this site in your browser settings, then try again."
-              : "Make sure location services are on and you have a clear view of the sky, then try again."}
+      {location.status === "ready" ? (
+        <>
+          <p className="text-sm text-[#46505C]">
+            Using your {location.simulated ? "simulated demo location" : "current location"}:{" "}
+            {location.point.lat.toFixed(5)}, {location.point.lng.toFixed(5)}
           </p>
           <button
-            onClick={location.refresh}
-            className="mt-3 rounded-lg bg-[#157A47] px-4 py-2 text-sm font-semibold text-white"
+            type="button"
+            onClick={onUseCurrent}
+            className="rounded-lg bg-[#157A47] px-4 py-3 font-semibold text-white"
           >
-            Try again
+            Use this location
+          </button>
+        </>
+      ) : (
+        <div role="status" className="rounded-lg border border-[#E2E6EA] bg-white p-4 text-sm text-[#46505C]">
+          {location.status === "loading"
+            ? "Finding your location… You can also choose a pin on the map."
+            : `Can't use GPS (${location.status === "denied" ? "permission denied" : "location unavailable"}). Choose a pin on the map instead.`}
+          <button
+            type="button"
+            onClick={location.refresh}
+            className="mt-3 block rounded-lg border px-4 py-2 font-semibold"
+          >
+            Try GPS again
           </button>
         </div>
       )}
+      <button
+        type="button"
+        onClick={onChooseMap}
+        className="rounded-lg border border-[#157A47] px-4 py-3 font-semibold text-[#157A47]"
+      >
+        Choose location on map
+      </button>
     </main>
   );
 }

@@ -191,7 +191,7 @@
     {
       "tempId": "F2",
       "title": "F2: Post a problem",
-      "body": "A resident records a video or picks photos, adds an optional description and submits. If an open report already exists nearby, they can tap Me too instead.\n\nChildren: US7, US8, US9, US10.",
+      "body": "A resident chooses where the problem is, records a video or picks photos, adds an optional description and submits. If an open report already exists nearby, they can tap Me too instead.\n\nChildren: US7, US8, US9, US10, US30.",
       "label": "feature",
       "area": "web",
       "specSection": "§4.1.1, §4.1.2",
@@ -246,6 +246,20 @@
           "specSection": "§4.1.2, §2.1.1",
           "blockedBy": [
             "US8"
+          ],
+          "priority": "demo-critical",
+          "agentDoable": true
+        },
+        {
+          "tempId": "US30",
+          "title": "US30: Choose a post location by dropping a map pin",
+          "body": "As a resident, I can place a pin on the problem's location instead of relying only on my phone's GPS.\n\nOn `/post`, use the current (or simulated demo) location by default when available. Before checking for nearby reports or opening capture, offer **Choose location on map**. The map starts at the current location, or the active-city center when GPS is unavailable; tapping moves the pin and confirming selects that point. Manual selection works when location permission is denied or unavailable. It takes precedence over later GPS refreshes and is used for both `nearbyOpen` (§4.1.2) and `createReport` (§4.1.1). A manually chosen pin is user-provided, not verified GPS; no address search or city boundary is required.\n\nFiles this card owns: `components/post/*`, `components/map/LocationPicker.tsx`, `tests/components/post/*`, `tests/components/map/LocationPicker.test.tsx`, `tasks/US30-todo.md`, `GOVTOK_DECISIONS.md`. Put new picker UI in `LocationPicker.tsx` so it does not modify the reports map.\n\nAcceptance criteria (agent-verifiable):\n- [ ] A user can choose the current location or open the map picker, tap a point, and confirm the selected coordinates.\n- [ ] When GPS is denied or unavailable, manual pin selection still reaches the nearby-report check and posting flow.\n- [ ] The selected coordinates drive `nearbyOpen` and `createReport`, remain unchanged by later GPS refreshes, and survive video/photo capture.\n- [ ] Tests cover map selection, cancellation, unavailable GPS, selected-coordinate query/submission, and demo-mode default location.\n- [ ] Build and type check pass.\n\nManual test (human, on an iPhone and Android phone after merge to prod):\n- [ ] With location permission denied, choose a pin, post a video or photo report, and verify the report's saved coordinates match the chosen point.\n- [ ] Move a pin close to an existing open report and verify the nearby Me too check uses that pin.\n\nPriority: demo-critical.",
+          "area": "web",
+          "size": "M",
+          "specSection": "§4.1.1, §4.1.2, §7.1.1",
+          "blockedBy": [
+            "US8",
+            "US10"
           ],
           "priority": "demo-critical",
           "agentDoable": true
