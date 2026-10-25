@@ -1,30 +1,50 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { transcribe } from "./lib/transcribe";
 import { validateVideoMetadata } from "./lib/videoIntakeValidation";
+
+const INTAKE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 function cleanError(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).slice(0, 1000);
 }
 
 export const generateUploadUrl = mutation({
-  args: {},
-  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    await ctx.runQuery(internal.videoIntakeDb.requireAdminSession, { token: sessionToken });
+    return await ctx.storage.generateUploadUrl();
+  },
 });
 
 export const saveUpload = mutation({
   args: {
+    sessionToken: v.string(),
     storageId: v.id("_storage"),
     fileName: v.string(),
     contentType: v.string(),
     fileSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const contentType = validateVideoMetadata(args.contentType, args.fileSize);
+    await ctx.runQuery(internal.videoIntakeDb.requireAdminSession, { token: args.sessionToken });
+    const storedFile = await ctx.db.system.get(args.storageId);
+    if (!storedFile) {
+      throw new Error("Uploaded video size does not match the validated file size.");
+    }
+    let contentType: string;
+    try {
+      contentType = validateVideoMetadata(args.contentType, args.fileSize);
+      if (storedFile.size !== args.fileSize || storedFile.size > 25 * 1024 * 1024) {
+        throw new Error("Uploaded video size does not match the validated file size.");
+      }
+    } catch (error) {
+      await ctx.storage.delete(args.storageId);
+      throw error;
+    }
 
     const now = Date.now();
-    return await ctx.db.insert("videoIntake", {
+    const id = await ctx.db.insert("videoIntake", {
       storageId: args.storageId,
       fileName: args.fileName.trim().slice(0, 255) || `video.${contentType === "video/mp4" ? "mp4" : "webm"}`,
       contentType,
@@ -33,22 +53,25 @@ export const saveUpload = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await ctx.scheduler.runAfter(INTAKE_RETENTION_MS, internal.videoIntake.purgeExpired, { id });
+    return id;
   },
 });
 
 export const get = query({
-  args: { id: v.id("videoIntake") },
-  handler: async (ctx, args) => await ctx.db.get(args.id),
+  args: { id: v.id("videoIntake"), sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.runQuery(internal.videoIntakeDb.requireAdminSession, { token: args.sessionToken });
+    return await ctx.db.get(args.id);
+  },
 });
 
 export const listRecent = query({
-  args: {},
-  handler: async (ctx) => await ctx.db.query("videoIntake").withIndex("by_created_at").order("desc").take(20),
-});
-
-export const getForTranscription = internalQuery({
-  args: { id: v.id("videoIntake") },
-  handler: async (ctx, args) => await ctx.db.get(args.id),
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    await ctx.runQuery(internal.videoIntakeDb.requireAdminSession, { token: sessionToken });
+    return await ctx.db.query("videoIntake").withIndex("by_created_at").order("desc").take(20);
+  },
 });
 
 export const claimForTranscription = internalMutation({
@@ -94,9 +117,20 @@ export const saveFailure = internalMutation({
   },
 });
 
-export const transcribeVideo = action({
+export const purgeExpired = internalMutation({
   args: { id: v.id("videoIntake") },
+  handler: async (ctx, { id }) => {
+    const entry = await ctx.db.get(id);
+    if (!entry || entry.createdAt > Date.now() - INTAKE_RETENTION_MS) return;
+    await ctx.storage.delete(entry.storageId);
+    await ctx.db.delete(id);
+  },
+});
+
+export const transcribeVideo = action({
+  args: { id: v.id("videoIntake"), sessionToken: v.string() },
   handler: async (ctx, args) => {
+    await ctx.runQuery(internal.videoIntakeDb.requireAdminSession, { token: args.sessionToken });
     const entry = await ctx.runMutation(internal.videoIntake.claimForTranscription, { id: args.id });
     if (!entry) throw new Error("This video is missing or is already being transcribed.");
 

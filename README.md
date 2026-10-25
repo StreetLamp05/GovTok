@@ -76,15 +76,15 @@ See [.env.example](.env.example). `.env.local` is git-ignored.
 
 ## Test video transcription
 
-Set `GROQ_API_KEY` on the Convex deployment, then run `npm run dev` and open
-`/admin/video-intake`. Choose an MP4 or WebM video up to 25 MB and select
-**Upload and transcribe**. The page uploads the file to Convex storage, records
-it in the `videoIntake` table, sends it to Groq Whisper, and shows the transcript
-and timestamped segments. The intake status and any transcription error are
-saved in the same table.
+Set `GROQ_API_KEY` and `ADMIN_PASSCODE` on the Convex deployment, then run `npm run dev` and open
+`/admin/video-intake`. Record a clip in the browser or choose an MP4 or WebM
+video up to 25 MB. The page uploads the video to Convex storage, records it in
+the `videoIntake` table, sends it to Groq Whisper, and shows the transcript and
+timestamped segments. Sign in with the Convex `ADMIN_PASSCODE`; the session
+expires after 30 minutes. Intake records and their uploaded files are deleted
+after seven days.
 
-This is an open test page for development, not a protected production upload
-flow. Do not use it for private or sensitive videos.
+This is a protected test page, not the production report-screening flow.
 
 To run the Groq checks against the local US11 clips, make sure the Convex CLI
 is logged in and the selected deployment has `GROQ_API_KEY`, then run:
@@ -94,5 +94,11 @@ node --experimental-strip-types scripts/try-transcribe.ts
 ```
 
 The script reads the key from Convex without printing it and sends each fixture
-to Groq. The video files in `scripts/fixtures/` are local-only and git-ignored;
-`labels.json` records how the test versions were made.
+to Groq. It also tests audio-only derivatives of the user-provided clips; these
+have a black video track so the original visual content is not uploaded. The
+visual sample MP4s and test videos are git-ignored and must be supplied locally.
+If any are missing, the script reports all missing fixture paths before making
+requests. `labels.json` records fixture metadata and clearly marks unconfirmed
+expected labels. `transcription-output.json` contains spoken transcript text
+and segment text from the live fixture run; review it before sharing or
+publishing because transcripts can contain personal information.

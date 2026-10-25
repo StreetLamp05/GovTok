@@ -144,4 +144,11 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_created_at", ["createdAt"]),
+
+  videoIntakeAdminSessions: defineTable({
+    token: v.string(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_expires_at", ["expiresAt"]),
 });

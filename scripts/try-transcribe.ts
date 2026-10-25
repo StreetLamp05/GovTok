@@ -1,13 +1,23 @@
 import { execSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { access, readFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
 import { transcribe } from "../convex/lib/transcribe.ts";
 
 const fixtures = [
-  { fileName: "narrated.mp4", contentType: "video/mp4" },
-  { fileName: "narrated.webm", contentType: "video/webm" },
-  { fileName: "near-silent.mp4", contentType: "video/mp4" },
-  { fileName: "near-silent.webm", contentType: "video/webm" },
+  { fileName: "audio-only/narrated.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/narrated.webm", contentType: "video/webm" },
+  { fileName: "audio-only/near-silent.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/near-silent.webm", contentType: "video/webm" },
+  { fileName: "audio-only/audio-only-IMG_6372.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/audio-only-IMG_6372.webm", contentType: "video/webm" },
+  { fileName: "audio-only/audio-only-IMG_6374.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/audio-only-IMG_6374.webm", contentType: "video/webm" },
+  { fileName: "audio-only/audio-only-IMG_6375.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/audio-only-IMG_6375.webm", contentType: "video/webm" },
+  { fileName: "audio-only/audio-only-IMG_6376.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/audio-only-IMG_6376.webm", contentType: "video/webm" },
+  { fileName: "audio-only/audio-only-IMG_6377.mp4", contentType: "video/mp4" },
+  { fileName: "audio-only/audio-only-IMG_6377.webm", contentType: "video/webm" },
 ] as const;
 
 function readDeploymentApiKey(): string {
@@ -24,18 +34,36 @@ function readDeploymentApiKey(): string {
 }
 
 async function main() {
-  const apiKey = readDeploymentApiKey();
   const fixtureDirectory = resolve("scripts/fixtures");
+  const missingFixtures: string[] = [];
+  for (const fixture of fixtures) {
+    try {
+      await access(resolve(fixtureDirectory, fixture.fileName));
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        missingFixtures.push(fixture.fileName);
+      } else {
+        throw error;
+      }
+    }
+  }
+  if (missingFixtures.length > 0) {
+    throw new Error(
+      `Missing local transcription fixtures: ${missingFixtures.join(", ")}. ` +
+        "Restore the user-provided fixture files under scripts/fixtures/audio-only before running this check.",
+    );
+  }
+
+  const apiKey = readDeploymentApiKey();
   let failed = false;
 
   for (const fixture of fixtures) {
-    const path = resolve(fixtureDirectory, fixture.fileName);
-    const bytes = await readFile(path);
-    const blob = new Blob([bytes], { type: fixture.contentType });
-
     try {
-      const result = await transcribe(blob, fixture.contentType, fixture.fileName, apiKey);
-      if (fixture.fileName.startsWith("near-silent.") && result.text.trim().length > 20) {
+      const path = resolve(fixtureDirectory, fixture.fileName);
+      const bytes = await readFile(path);
+      const blob = new Blob([bytes], { type: fixture.contentType });
+      const result = await transcribe(blob, fixture.contentType, basename(fixture.fileName), apiKey);
+      if (fixture.fileName.includes("near-silent") && result.text.trim().length > 20) {
         failed = true;
         console.error(
           `${fixture.fileName}: expected an empty or near-empty transcript, got ${result.text.trim().length} characters.`,

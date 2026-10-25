@@ -1,0 +1,159 @@
+{
+    "generatedAt":  "2026-10-25T06:29:21Z",
+    "results":  [
+                    {
+                        "fileName":  "audio-only/narrated.mp4",
+                        "text":  " This missing piece of sidewalk and debris is a tripping hazard, especially those with accessibility issues.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  6,
+                                             "text":  " This missing piece of sidewalk and debris is a tripping hazard, especially those with accessibility issues."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/narrated.webm",
+                        "text":  " This missing piece of sidewalk and debris is a tripping hazard, especially those with accessibility issues.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  6,
+                                             "text":  " This missing piece of sidewalk and debris is a tripping hazard, especially those with accessibility issues."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/near-silent.mp4",
+                        "text":  " Thank you.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  29.98,
+                                             "text":  " Thank you."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/near-silent.webm",
+                        "text":  " Thank you.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  29.98,
+                                             "text":  " Thank you."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6372.mp4",
+                        "text":  " There\u0027s litter on the sidewalk.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  2.1,
+                                             "text":  " There\u0027s litter on the sidewalk."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6372.webm",
+                        "text":  " There\u0027s litter on the sidewalk.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  2.1,
+                                             "text":  " There\u0027s litter on the sidewalk."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6374.mp4",
+                        "text":  " We noticed that there\u0027s a missing piece of sidewalk, which can be a tripping hazard.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  4.4,
+                                             "text":  " We noticed that there\u0027s a missing piece of sidewalk, which can be a tripping hazard."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6374.webm",
+                        "text":  " We noticed that there\u0027s a missing piece of sidewalk which can be a tripping hazard.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  4.4,
+                                             "text":  " We noticed that there\u0027s a missing piece of sidewalk which can be a tripping hazard."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6375.mp4",
+                        "text":  " This street light on an intersection of Polk Street and Bay Street is out.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  5.44,
+                                             "text":  " This street light on an intersection of Polk Street and Bay Street is out."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6375.webm",
+                        "text":  " This street light on an intersection of Polk Street and Bay Street is out.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  5.44,
+                                             "text":  " This street light on an intersection of Polk Street and Bay Street is out."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6376.mp4",
+                        "text":  " We notice that this Subaru here is messed up and filled up with trash.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  3.3799999,
+                                             "text":  " We notice that this Subaru here is messed up and filled up with trash."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6376.webm",
+                        "text":  " We noticed that this Subaru here is messed up and filled up with trash.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  3.82,
+                                             "text":  " We noticed that this Subaru here is messed up and filled up with trash."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6377.mp4",
+                        "text":  " The streetlight on the intersection of Lombard and Van Ness Road is out.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  5.8399997,
+                                             "text":  " The streetlight on the intersection of Lombard and Van Ness Road is out."
+                                         }
+                                     ]
+                    },
+                    {
+                        "fileName":  "audio-only/audio-only-IMG_6377.webm",
+                        "text":  " The street light on the intersection of Lombard and Van Ness Road is out.",
+                        "segments":  [
+                                         {
+                                             "start":  0,
+                                             "end":  5.74,
+                                             "text":  " The street light on the intersection of Lombard and Van Ness Road is out."
+                                         }
+                                     ]
+                    }
+                ]
+}

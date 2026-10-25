@@ -50,6 +50,19 @@ test("a fixer uploads with their fixer token instead", async () => {
   expect(mutation).toHaveBeenCalledWith(api.files.generateUploadUrl, { fixerToken: "fixer-token" });
 });
 
+test("uploadFile removes codec parameters from the Content-Type header", async () => {
+  const uploadFile = await load();
+  const blob = new Blob(["clip"], { type: "video/mp4;codecs=avc1,mp4a.40.2" });
+
+  await uploadFile(blob);
+
+  expect(fetchMock).toHaveBeenCalledWith(UPLOAD_URL, {
+    method: "POST",
+    headers: { "Content-Type": "video/mp4" },
+    body: blob,
+  });
+});
+
 test("a failed POST throws", async () => {
   fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
   const uploadFile = await load();

@@ -22,6 +22,8 @@ import type * as placeholder from "../placeholder.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
 import type * as videoIntake from "../videoIntake.js";
+import type * as videoIntakeAuth from "../videoIntakeAuth.js";
+import type * as videoIntakeDb from "../videoIntakeDb.js";
 
 import type {
   ApiFromModules,
@@ -44,6 +46,8 @@ declare const fullApi: ApiFromModules<{
   screening: typeof screening;
   screeningDb: typeof screeningDb;
   videoIntake: typeof videoIntake;
+  videoIntakeAuth: typeof videoIntakeAuth;
+  videoIntakeDb: typeof videoIntakeDb;
 }>;
 
 /**
