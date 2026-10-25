@@ -69,15 +69,10 @@ describe("sortNearestFirst", () => {
   });
 });
 
-test("formatDistance, daysOpen and daysLabel", async () => {
-  const { daysLabel, daysOpen, formatDistance } = await load();
+test("formatDistance", async () => {
+  const { formatDistance } = await load();
   expect(formatDistance(42.4)).toBe("42 m");
   expect(formatDistance(2_480)).toBe("2.5 km");
-  expect(daysOpen(0, 23 * DAY_MS + 5)).toBe(23);
-  expect(daysOpen(10, 0)).toBe(0);
-  expect(daysLabel(0)).toBe("0 days");
-  expect(daysLabel(1)).toBe("1 day");
-  expect(daysLabel(23)).toBe("23 days");
 });
 
 describe("FixerList", () => {

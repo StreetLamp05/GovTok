@@ -137,6 +137,7 @@ Updated incrementally as decisions are locked in.
 **1.1.4 Speech-to-text engine — Groq Whisper large-v3-turbo**
 - Videos only; slideshows skip this step (§4.1.1). Transcription runs in the same Convex action as the Claude call (§1.1.3). The action reads the clip from Convex storage and POSTs it to Groq's OpenAI-compatible transcription endpoint (`whisper-large-v3-turbo`, `verbose_json` for segment timestamps). The transcript and its segments are saved on the report.
 - Groq accepts the browser's webm/mp4 directly, so there's no ffmpeg step. The free-tier file limit is about 25 MB, and clips stay well under it (§4.1.1).
+  - (2026-10-25, US8) One limit everywhere: `MAX_CLIP_BYTES = 25,000,000` bytes (`convex/lib/clipLimit.ts`), used by posts, the admin intake and transcription. It's 25,000,000 rather than 25 MiB so a clip that passes our checks can't fail at Groq, whichever unit Groq means.
 - Whisper can invent text on near-silent clips ("Thanks for watching"). Claude's prompt treats the transcript as untrusted and possibly empty.
 - Cost: about $0.04 per hour of audio, billed at a 10s minimum per request. Effectively free at every scale we plan for.
 - Key: `GROQ_API_KEY`, kept in Convex env only.
@@ -157,7 +158,7 @@ Updated incrementally as decisions are locked in.
   - `mediaType: video | photos` (retcon, §4.1.1). `description` (optional, up to 280 characters).
   - Original media: `clipStorageId` (videos), `frameStorageIds[]` (about 6 frame JPEGs for videos, or the 1–10 photos for slideshows; reused by §4.3.1), `transcript`, `segments` (videos).
   - Location: `lat`, `lng`, `street`.
-  - `category`, plus `owner` and `agency` stored at creation from the §2.1.2 table. `title`, `status` (§2.1.3).
+  - `category`, plus `owner` and `agency` from the §2.1.2 table, stored when screening sets the category (2026-10-25, US8: they're unknown while the report is `pending`). `title`, `status` (§2.1.3).
   - Screening: `verdict`, `reason`, `audioMuted` (§4.2.1).
   - `isSample` (§6.1.1).
   - `meTooCount`, `lastActivityAt` (feed order, §5.1.2), `revealViews` (§6.2.1).
@@ -393,7 +394,8 @@ Updated incrementally as decisions are locked in.
   3. Play a pre-filmed before/after pair of the same California spot. Claude verifies it, and the reveal plays (§5.1.1).
 - Needs before/after pairs filmed at the same spot, so Claude's same-spot check passes honestly.
 - **Seeding** (sweep, 2026-10-24): an admin-only Convex action runs each sample clip through the real pipeline (transcription, then screening, §1.1.3/§1.1.4/§4.2.1), then sets `isSample: true`. Claude really did screen the seeds.
-- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "0 days". This is acceptable only because the Sample badge labels them.
+- **Backdating** (2026-10-24): samples may get backdated `createdAt` / `lastActivityAt` / `fixedAt`, so cards read "Open · 23 days" rather than "Open · today". This is acceptable only because the Sample badge labels them.
+  - Under one day, feed cards read "Open · today" / "Fixed same day", following the mockup (2026-10-25, US17). The fixer screens still say "0 days".
 - **Seed ownership** (2026-10-24): a seeded report can be assigned to the demo phone's resident token, so its Me page shows "the pothole I posted just got fixed" (§5.4.1).
 - **Demo-mode upload** (sweep, 2026-10-24): with `?demo=mableton`, capture screens show an "Upload clip" button. Frames come from the file (§4.1.1). Uploaded fix clips always play muted (§4.3.1's "no commentary").
 - Rationale: the whole flow runs live on stage in Berkeley, the routing and map stay Mableton, and everything simulated is labeled on screen. That matters for the Anthropic track's "real problem" criterion and for the Mayor on Oct 30.

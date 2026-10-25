@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { transcribe } from "./lib/transcribe";
+import { MAX_CLIP_BYTES } from "./lib/clipLimit";
 import { validateVideoMetadata } from "./lib/videoIntakeValidation";
 
 const INTAKE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -35,7 +36,7 @@ export const saveUpload = mutation({
     let contentType: string;
     try {
       contentType = validateVideoMetadata(args.contentType, args.fileSize);
-      if (storedFile.size !== args.fileSize || storedFile.size > 25 * 1024 * 1024) {
+      if (storedFile.size !== args.fileSize || storedFile.size > MAX_CLIP_BYTES) {
         throw new Error("Uploaded video size does not match the validated file size.");
       }
     } catch (error) {
