@@ -224,13 +224,14 @@ Updated incrementally as decisions are locked in.
 - 📌 Deferred (§8): real resident identity for the pilot (Google sign-in or phone), so me-too counts can be trusted.
 
 **3.1.2 Fixer access — a passcode per fixer, DB-only**
-- `fixers {name, org, passcode}`, seeded by hand (e.g. "Mableton Sanitation / 4821").
+- `fixers {name, org, passcode, token}`, seeded by hand (e.g. "Mableton Sanitation / 4821"). `token` is issued at the first passcode check and reused after that.
 - A hidden `/fix` route asks for the passcode once. A Convex mutation checks it server-side and returns a fixer token, which the browser stores in `localStorage` (screen: §5.3.1).
 - The fix mutation refuses any request without a valid fixer token. Any fixer can close any `open` report.
 - The fixed card shows the fixer's **org** ("Fixed by Mableton Sanitation"), never a person's name (Scope: "no workers shown").
 - Prize check (2026-10-24): none of the target tracks scores auth. Microsoft's "path from prototype to production" is answered by a pitch line instead: "Pilot: residents sign in with Google or phone, and city staff use the city's single sign-on." The only auth prize is MLH Auth0 (headphones), not worth the setup.
+- Known weaknesses, accepted for the hackathon (2026-10-25, US21): there's no limit on passcode guesses, and a passcode is revoked only by deleting its fixer row in the Convex dashboard (re-seeding a fixer under a new passcode leaves the old one working).
 - 📌 **Forward reference (§4.3.2)**: whether fixers are limited to reports their org owns (city staff can't close Cobb reports).
-- 📌 Deferred (§8): city single sign-on for fixers in the pilot.
+- 📌 Deferred (§8): city single sign-on for fixers in the pilot, and a limit on passcode guesses.
 
 ---
 
@@ -445,6 +446,7 @@ Updated incrementally as decisions are locked in.
 - Replace the California samples with real Mableton footage, and turn `?demo=mableton` off (§6.1.1)
 - Native mobile app with native capture (needs an Apple developer account) (§4.1.1)
 - City single sign-on for fixers (§3.1.2)
+- A limit on fixer passcode guesses (§3.1.2)
 - Real resident identity for the pilot (Google sign-in or phone) so me-too counts can be trusted (§3.1.1)
 - Reopening a fixed report when the fix didn't hold (§2.1.3)
 - Speech-to-text on Google STT for the Google-hosted Oct 30 event (optional)

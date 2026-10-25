@@ -13,6 +13,7 @@ import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as fixVerification from "../fixVerification.js";
 import type * as fixVerificationDb from "../fixVerificationDb.js";
+import type * as fixers from "../fixers.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_publicReport from "../lib/publicReport.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   fixVerification: typeof fixVerification;
   fixVerificationDb: typeof fixVerificationDb;
+  fixers: typeof fixers;
   "lib/auth": typeof lib_auth;
   "lib/geo": typeof lib_geo;
   "lib/publicReport": typeof lib_publicReport;
