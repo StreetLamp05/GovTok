@@ -106,7 +106,8 @@ export const screenReport = internalAction({
           attempt: attempt + 1,
         });
       } else {
-        await ctx.runMutation(internal.screeningDb.markFailed, { reportId, media });
+        const message = error instanceof Error ? error.message : String(error);
+        await ctx.runMutation(internal.screeningDb.markFailed, { reportId, media, error: message });
       }
     }
   },

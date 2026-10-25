@@ -5,7 +5,7 @@ import type { QueryCtx } from "../_generated/server";
 // through this. It's an allowlist, so a field added to `reports` stays private until it's
 // added here: residentId, fixedBy, fixedByOrg, verdict and reason are never returned.
 // ownerReport is the poster's own view (Me page, Checking… screen, §5.4.1): the same
-// fields plus verdict and reason, for any status, and only for the poster.
+// fields plus verdict, reason and the screening-failure details, for any status, and only for the poster.
 
 export const PUBLIC_STATUSES = ["open", "fixed"] as const satisfies readonly Doc<"reports">["status"][];
 export type PublicStatus = (typeof PUBLIC_STATUSES)[number];
@@ -47,7 +47,8 @@ type ProjectedReport = Pick<
   };
 
 export type PublicReport = Omit<ProjectedReport, "status"> & { status: PublicStatus };
-export type OwnerReport = ProjectedReport & Pick<Doc<"reports">, "verdict" | "reason">;
+export type OwnerReport = ProjectedReport &
+  Pick<Doc<"reports">, "verdict" | "reason" | "screeningError" | "screeningRetries">;
 
 const urlOf = (ctx: QueryCtx, id: Id<"_storage"> | undefined) => (id ? ctx.storage.getUrl(id) : null);
 
@@ -79,7 +80,13 @@ export async function ownerReport(
   if (report.residentId !== residentId) {
     throw new Error(`ownerReport: report ${report._id} isn't this resident's`);
   }
-  return { ...(await project(ctx, report)), verdict: report.verdict, reason: report.reason };
+  return {
+    ...(await project(ctx, report)),
+    verdict: report.verdict,
+    reason: report.reason,
+    screeningError: report.screeningError,
+    screeningRetries: report.screeningRetries,
+  };
 }
 
 async function project(ctx: QueryCtx, report: Doc<"reports">): Promise<ProjectedReport> {

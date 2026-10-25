@@ -2,21 +2,22 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import PhotoPicker from "@/components/capture/PhotoPicker";
-import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
+import CameraCapture from "@/components/capture/CameraCapture";
 import NearbyCheck from "@/components/post/NearbyCheck";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_CLIP_BYTES } from "@/convex/lib/clipLimit";
 import { CLIP_TOO_BIG, MAX_DESCRIPTION_LENGTH } from "@/convex/lib/postLimits";
 import type { LatLng } from "@/lib/demo";
+import type { RecordedClip } from "@/lib/hooks/useClipRecorder";
 import { useCurrentLocation, type LocationState } from "@/lib/hooks/useCurrentLocation";
 import { getResidentToken, useResidentToken } from "@/lib/hooks/useResidentToken";
 import { uploadFile } from "@/lib/upload";
 import CheckingScreen from "./CheckingScreen";
 
-// Posting (§4.1.1): location → capture (video or photos) → preview + optional description → Submit → Checking….
+// Posting (§4.1.1): location → full-screen camera (video or photos) → preview + optional description → Submit → Checking….
 // Each file is uploaded to Convex storage, then createReport saves the report as pending.
 
 // What's being posted, with object URLs for the preview and the location it was captured at.
@@ -26,8 +27,15 @@ type Draft =
 type Mode = Draft["kind"];
 
 const SUBMIT_ERROR = "We couldn't send your post. Check your connection and try again.";
+const HINTS = {
+  // An uploaded clip is pinned to the phone's location now too, not where it was filmed (§4.1.1).
+  video: "Film the problem for up to 20 seconds. Say what's wrong if you like. An upload is pinned to where you are now.",
+  // Re-encoding strips each photo's GPS, so the pin is the phone's location now (§4.1.1).
+  photos: "Up to 10 photos. Your post is pinned to where you are now, so post from where the problem is.",
+};
 
 export default function PostFlow() {
+  const router = useRouter();
   const location = useCurrentLocation();
   const residentToken = useResidentToken();
   const createReport = useMutation(api.posts.createReport);
@@ -70,6 +78,8 @@ export default function PostFlow() {
   }
 
   function captured(clip: RecordedClip) {
+    // So Record again comes back to the same mode.
+    setMode("video");
     setDraft({
       kind: "video",
       clip,
@@ -83,6 +93,7 @@ export default function PostFlow() {
   }
 
   function picked(photos: Blob[]) {
+    setMode("photos");
     setDraft({
       kind: "photos",
       photos,
@@ -96,7 +107,8 @@ export default function PostFlow() {
 
   async function submit() {
     if (!draft || submitting || !point) return;
-    // Checked before uploading, so an oversized camera-app file fails fast instead of after a long upload.
+    // Uploads over 25 MB are converted first (convertClip), so this is a backstop: it fails fast
+    // instead of after a long upload.
     if (draft.kind === "video" && draft.clip.blob.size > MAX_CLIP_BYTES) {
       setError(CLIP_TOO_BIG);
       return;
@@ -149,26 +161,14 @@ export default function PostFlow() {
       );
     }
     return (
-      <main className="flex flex-col gap-4 p-6">
-        <h1 className="text-2xl font-extrabold">Post a problem</h1>
-        <ModeChoice mode={mode} onChange={setMode} />
-        {mode === "video" && (
-          <>
-            <p className="text-[#4A5A6E]">Film the problem for up to 20 seconds. Say what&apos;s wrong if you like.</p>
-            {/* Switching to Photos unmounts the recorder, which turns the camera off. */}
-            <VideoRecorder audio autoOpen onDone={captured} />
-          </>
-        )}
-        {/* Only hidden while Video shows, so switching back keeps the photos already picked. */}
-        <div className={mode === "photos" ? "flex flex-col gap-4" : "hidden"}>
-          {/* Re-encoding strips each photo's GPS, so the pin is the phone's location now (§4.1.1). */}
-          <p className="text-[#4A5A6E]">
-            Take or choose up to 10 photos of the problem. Your post is pinned to where you are now, so post from where
-            the problem is.
-          </p>
-          <PhotoPicker onDone={picked} />
-        </div>
-      </main>
+      <CameraCapture
+        modes={["video", "photos"]}
+        initialMode={mode}
+        hints={HINTS}
+        onVideo={captured}
+        onPhotos={picked}
+        onClose={() => router.push("/")}
+      />
     );
   }
 
@@ -241,29 +241,8 @@ export default function PostFlow() {
   );
 }
 
-// Video or a photo slideshow (§4.1.1). Video first, since it's the default.
-function ModeChoice({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
-  const options: { value: Mode; label: string }[] = [
-    { value: "video", label: "Video" },
-    { value: "photos", label: "Photos" },
-  ];
-  return (
-    <div role="group" aria-label="Post a video or photos" className="flex rounded-lg border border-[#C9D3DE] p-1">
-      {options.map(({ value, label }) => (
-        <button
-          key={value}
-          aria-pressed={mode === value}
-          onClick={() => onChange(value)}
-          className={`flex-1 rounded-md px-4 py-2 font-semibold ${mode === value ? "bg-[#157A47] text-white" : "text-[#4A5A6E]"}`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// Reports are pinned to where they were filmed, so posting waits for a location (§7.1.1).
+// Reports are pinned to the phone's location when posting (where a live clip is filmed; an
+// upload or slideshow may differ, §4.1.1), so posting waits for a location (§7.1.1).
 function LocationGate({ location }: { location: LocationState & { refresh: () => void } }) {
   return (
     <main className="flex flex-col gap-4 p-6">

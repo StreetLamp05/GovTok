@@ -111,3 +111,20 @@ export async function framesFromFile(file: Blob, count: number = FRAME_COUNT): P
     URL.revokeObjectURL(url);
   }
 }
+
+/** A clip's length in seconds, via a hidden `<video>` (MediaRecorder webm included). */
+export async function clipDurationS(file: Blob): Promise<number> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "metadata";
+  try {
+    video.src = url;
+    await until(video, ["loadedmetadata"], () => true, "the clip to load");
+    return await finiteDuration(video);
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}

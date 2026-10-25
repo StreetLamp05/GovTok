@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getResidentToken } from "@/lib/hooks/useResidentToken";
 import { framesFromFile } from "@/lib/media/frames";
+import { normalizeClip } from "@/lib/media/normalizeClip";
 import { normalizeMimeType } from "@/lib/media/mimeType";
 import { photoToJpeg } from "@/lib/media/photos";
 import { PRESETS } from "./presets";
@@ -16,6 +17,10 @@ import { PRESETS } from "./presets";
 // passcode lives in this page's state only; every seed call sends it to be checked server-side.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// A clip being made postable (§4.1.1), started the moment it's picked, inside that tap, so iOS
+// lets it keep its sound (see convertClip). Seed waits for it.
+type Prepared = { clip: Promise<Blob>; controller: AbortController; status: string };
 
 type Row = {
   key: number;
@@ -28,6 +33,8 @@ type Row = {
   daysSinceActivity: string;
   mine: boolean;
   fixFile: File | null;
+  prepared: Prepared | null; // the sample's clip, when it's a video
+  fixPrepared: Prepared | null;
   fixBy: string; // a fixer ID, or "resident" for a neighbor
   fixedDaysAgo: string;
 };
@@ -47,6 +54,8 @@ function newRow(index: number): Row {
     daysSinceActivity: "",
     mine: false,
     fixFile: null,
+    prepared: null,
+    fixPrepared: null,
     fixBy: "",
     fixedDaysAgo: "",
   };
@@ -125,9 +134,32 @@ function Seeder({ passcode }: { passcode: string }) {
     return ((await res.json()) as { storageId: Id<"_storage"> }).storageId;
   }
 
-  async function uploadClip(file: File) {
-    const frames = await framesFromFile(file);
-    const [clipStorageId, frameStorageIds] = await Promise.all([upload(file), Promise.all(frames.map(upload))]);
+  // Starts converting an iPhone .mov, a clip over 25 MB or one over 20 s (§4.1.1) right away, in
+  // real time, replacing whatever that slot was preparing before. Fix clips lose their sound.
+  function prepare(key: number, slot: "prepared" | "fixPrepared", file: File | null, previous: Prepared | null) {
+    previous?.controller.abort();
+    if (!file?.type.startsWith("video/")) return null;
+    const controller = new AbortController();
+    const setStatus = (status: string) =>
+      setRows((all) =>
+        all.map((row) => (row.key === key && row[slot]?.controller === controller ? { ...row, [slot]: { ...row[slot]!, status } } : row)),
+      );
+    const clip = normalizeClip(file, {
+      onProgress: (p) => setStatus(`Converting… ${Math.round(p * 100)}%`),
+      signal: controller.signal,
+      audio: slot === "prepared",
+    });
+    clip.then(
+      (out) => setStatus(out === file ? "" : "Converted"),
+      (err: unknown) => (err as Error)?.name !== "AbortError" && setStatus("Couldn't convert this clip. Convert it with ffmpeg."),
+    );
+    return { clip, controller, status: "" };
+  }
+
+  async function uploadClip(prepared: Prepared) {
+    const clip = await prepared.clip;
+    const frames = await framesFromFile(clip);
+    const [clipStorageId, frameStorageIds] = await Promise.all([upload(clip), Promise.all(frames.map(upload))]);
     return { clipStorageId, frameStorageIds };
   }
 
@@ -153,14 +185,14 @@ function Seeder({ passcode }: { passcode: string }) {
 
         setProgress(`Uploading sample ${i + 1} of ${rows.length}…`);
         const media = isVideo
-          ? { mediaType: "video" as const, ...(await uploadClip(row.files[0])) }
+          ? { mediaType: "video" as const, ...(await uploadClip(row.prepared!)) }
           : {
               mediaType: "photos" as const,
               frameStorageIds: await Promise.all(row.files.map(async (photo) => upload(await photoToJpeg(photo)))),
             };
         const fix = row.fixFile
           ? {
-              ...(await uploadClip(row.fixFile)),
+              ...(await uploadClip(row.fixPrepared!)),
               by: row.fixBy === "resident" ? { kind: "resident" as const } : { kind: "fixer" as const, fixerId: row.fixBy as Id<"fixers"> },
               fixedAt,
             }
@@ -202,10 +234,15 @@ function Seeder({ passcode }: { passcode: string }) {
             Clip or photos{" "}
             <input
               type="file"
-              accept="video/mp4,video/webm,image/*"
+              accept="video/*,image/*"
               multiple
-              onChange={(e) => update(row.key, { files: Array.from(e.target.files ?? []) })}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                const clip = files.length === 1 ? files[0] : null;
+                update(row.key, { files, prepared: prepare(row.key, "prepared", clip, row.prepared) });
+              }}
             />
+            {row.prepared?.status && <span className="ml-2 text-gray-600">{row.prepared.status}</span>}
           </label>
           <label>
             Location{" "}
@@ -269,7 +306,15 @@ function Seeder({ passcode }: { passcode: string }) {
           <div className="flex flex-wrap items-center gap-3 border-t pt-2">
             <label>
               Fix clip (optional){" "}
-              <input type="file" accept="video/mp4,video/webm" onChange={(e) => update(row.key, { fixFile: e.target.files?.[0] ?? null })} />
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  update(row.key, { fixFile: file, fixPrepared: prepare(row.key, "fixPrepared", file, row.fixPrepared) });
+                }}
+              />
+              {row.fixPrepared?.status && <span className="ml-2 text-gray-600">{row.fixPrepared.status}</span>}
             </label>
             <select value={row.fixBy} onChange={(e) => update(row.key, { fixBy: e.target.value })} className="rounded border px-2 py-1">
               <option value="">Filmed by…</option>
@@ -292,7 +337,11 @@ function Seeder({ passcode }: { passcode: string }) {
             </label>
           </div>
           {rows.length > 1 && (
-            <button type="button" className="justify-self-start text-red-700 underline" onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>
+            <button type="button" className="justify-self-start text-red-700 underline" onClick={() => {
+              row.prepared?.controller.abort();
+              row.fixPrepared?.controller.abort();
+              setRows((all) => all.filter((r) => r.key !== row.key));
+            }}>
               Remove
             </button>
           )}
