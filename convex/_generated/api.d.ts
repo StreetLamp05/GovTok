@@ -24,14 +24,15 @@ import type * as lib_screening from "../lib/screening.js";
 import type * as lib_transcribe from "../lib/transcribe.js";
 import type * as lib_videoIntakeValidation from "../lib/videoIntakeValidation.js";
 import type * as map from "../map.js";
+import type * as me from "../me.js";
 import type * as placeholder from "../placeholder.js";
 import type * as purge from "../purge.js";
 import type * as screening from "../screening.js";
 import type * as screeningDb from "../screeningDb.js";
+import type * as stats from "../stats.js";
 import type * as videoIntake from "../videoIntake.js";
 import type * as videoIntakeAuth from "../videoIntakeAuth.js";
 import type * as videoIntakeDb from "../videoIntakeDb.js";
-import type * as stats from "../stats.js";
 
 import type {
   ApiFromModules,
@@ -56,14 +57,15 @@ declare const fullApi: ApiFromModules<{
   "lib/transcribe": typeof lib_transcribe;
   "lib/videoIntakeValidation": typeof lib_videoIntakeValidation;
   map: typeof map;
+  me: typeof me;
   placeholder: typeof placeholder;
   purge: typeof purge;
   screening: typeof screening;
   screeningDb: typeof screeningDb;
+  stats: typeof stats;
   videoIntake: typeof videoIntake;
   videoIntakeAuth: typeof videoIntakeAuth;
   videoIntakeDb: typeof videoIntakeDb;
-  stats: typeof stats;
 }>;
 
 /**
