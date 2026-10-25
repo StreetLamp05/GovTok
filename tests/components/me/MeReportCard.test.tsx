@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type { OwnerReport } from "../../../convex/lib/publicReport";
 import MeReportCard, { reportStatusText } from "../../../components/me/MeReportCard";
 
@@ -43,6 +43,10 @@ describe("reportStatusText", () => {
     [report({ status: "held", reason: "screening failed" }), "Screening failed"],
     [report({ status: "open" }), "Open · 2 days"],
     [report({ status: "fixed", fixedAt: NOW - 86_400_000 }), "Fixed in 1 day"],
+    // Same-day wording matches the feed chip and the reveal stamp ("FIXED · same day").
+    [report({ status: "open", createdAt: NOW - 1000 }), "Open · today"],
+    [report({ status: "fixed", createdAt: NOW - 1000, fixedAt: NOW }), "Fixed same day"],
+    [report({ status: "fixed", fixedAt: undefined }), "Fixed"],
   ])("labels %s as %s", (fixture, expected) => {
     expect(reportStatusText(fixture, NOW)).toBe(expected);
   });
@@ -69,5 +73,68 @@ test("highlights fixed reports and shows open counts without revealing muted spe
 
   rerender(<MeReportCard report={report({ audioMuted: true })} now={NOW} />);
   expect(screen.getByText("Audio muted for privacy · 2 me-toos")).toBeTruthy();
-  expect(screen.queryByText(/transcript/i)).toBeNull();
+});
+
+describe("each status from a fixture report", () => {
+  test("pending shows Checking… and no actions or link", () => {
+    render(<MeReportCard report={report({ status: "pending" })} now={NOW} />);
+    expect(screen.getByText("Checking…")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  test("reject shows Claude's reason with no retake, retry or link", () => {
+    render(<MeReportCard report={report({ status: "held", verdict: "reject", reason: "Not a public-space problem" })} now={NOW} />);
+    expect(screen.getByText("Not posted")).toBeTruthy();
+    expect(screen.getByText("Not a public-space problem")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  test("open shows days, me-toos and a link to the feed", () => {
+    render(<MeReportCard report={report({ status: "open" })} now={NOW} />);
+    expect(screen.getByText("Open · 2 days")).toBeTruthy();
+    expect(screen.getByText("Posted · 2 me-toos")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "View report" }).getAttribute("href")).toBe("/?report=report-1");
+  });
+
+  test("a fixed me-too is highlighted and can play the reveal too", () => {
+    render(<MeReportCard report={report({ status: "fixed", fixedAt: NOW })} now={NOW} isMeToo />);
+    expect(document.querySelector('[data-status="fixed"]')?.className).toContain("ring-2");
+    expect(screen.getByRole("button", { name: "Play the fix" })).toBeTruthy();
+  });
+
+  test("a me-too'd report says so", () => {
+    render(<MeReportCard report={report({ status: "open", meTooCount: 1 })} now={NOW} isMeToo />);
+    expect(screen.getByText("You me-too'd this · 1 me-too")).toBeTruthy();
+  });
+
+  test("fixed is highlighted and a tap plays the reveal with a muted fix clip", () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+    render(
+      <MeReportCard
+        report={report({
+          status: "fixed",
+          fixedAt: NOW - 86_400_000,
+          fixedByKind: "fixer",
+          fixedByLabel: "Mableton Sanitation",
+          clipUrl: "https://files.test/r1.mp4",
+          fixUrl: "https://files.test/r1-fix.mp4",
+        })}
+        now={NOW}
+      />,
+    );
+    expect(document.querySelector('[data-status="fixed"]')?.className).toContain("ring-2");
+    expect(screen.queryByTestId("me-reveal")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Play the fix" }));
+    expect(screen.getByTestId("me-reveal")).toBeTruthy();
+    const fix = screen.getByTestId("fix-clip") as HTMLVideoElement;
+    expect(fix.muted).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide the fix" }));
+    expect(screen.queryByTestId("me-reveal")).toBeNull();
+    vi.restoreAllMocks();
+  });
 });

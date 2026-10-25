@@ -13,7 +13,8 @@ export const myReports = query({
       .query("reports")
       .withIndex("by_resident", (q) => q.eq("residentId", residentId))
       .collect();
-    reports.sort((a, b) => b.lastActivityAt - a.lastActivityAt);
+    // Newest post first. Not lastActivityAt, which every me-too bumps.
+    reports.sort((a, b) => b.createdAt - a.createdAt);
     return await Promise.all(reports.map((report) => ownerReport(ctx, report, residentId)));
   },
 });

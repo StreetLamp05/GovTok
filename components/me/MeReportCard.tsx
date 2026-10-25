@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { statusText } from "@/components/feed/CardOverlay";
+import RevealPlayer from "@/components/RevealPlayer";
 import type { OwnerReport, PublicReport } from "@/convex/lib/publicReport";
+import { SCREENING_FAILED_REASON } from "@/convex/lib/screening";
 
 type Props = {
   report: OwnerReport | PublicReport;
@@ -13,15 +19,11 @@ export function reportStatusText(report: OwnerReport | PublicReport, now: number
     if (report.verdict === "emergency") return "Emergency";
     if (report.verdict === "retake") return "Retake needed";
     if (report.verdict === "reject") return "Not posted";
-    if (report.reason === "screening failed") return "Screening failed";
+    if (report.reason === SCREENING_FAILED_REASON) return "Screening failed";
     return "Not posted";
   }
-  if (report.status === "fixed") {
-    const days = Math.max(0, Math.floor(((report.fixedAt ?? now) - report.createdAt) / 86_400_000));
-    return `Fixed in ${days} ${days === 1 ? "day" : "days"}`;
-  }
-  const days = Math.max(0, Math.floor((now - report.createdAt) / 86_400_000));
-  return `Open · ${days} ${days === 1 ? "day" : "days"}`;
+  // Same chip as the feed ("Open · today", "Fixed same day"), so it matches the reveal stamp.
+  return statusText({ status: report.status, createdAt: report.createdAt, fixedAt: report.fixedAt }, now);
 }
 
 export default function MeReportCard({ report, now, isMeToo = false }: Props) {
@@ -30,6 +32,8 @@ export default function MeReportCard({ report, now, isMeToo = false }: Props) {
   const publicReport = report.status === "open" || fixed;
   const status = reportStatusText(report, now);
   const reason = held?.reason;
+  // Fixed items play the before/after reveal (US19) on a tap (§5.4.1).
+  const [playing, setPlaying] = useState(false);
 
   return (
     <article
@@ -56,6 +60,21 @@ export default function MeReportCard({ report, now, isMeToo = false }: Props) {
         </p>
       )}
       {fixed && <p className="mt-2 text-sm font-semibold text-[#157A47]">This report has been fixed.</p>}
+      {fixed && (
+        <button
+          type="button"
+          aria-pressed={playing}
+          onClick={() => setPlaying((on) => !on)}
+          className="mt-3 rounded-lg bg-[#157A47] px-4 py-2 text-sm font-bold text-white"
+        >
+          {playing ? "Hide the fix" : "Play the fix"}
+        </button>
+      )}
+      {fixed && playing && (
+        <div data-testid="me-reveal" className="mx-auto mt-3 aspect-[9/16] w-full max-w-xs overflow-hidden rounded-xl">
+          <RevealPlayer report={report} active standalone />
+        </div>
+      )}
       {held && reason && <p className="mt-2 text-sm text-[#46505C]">{reason}</p>}
       {held?.verdict === "emergency" && (
         <a href="tel:911" className="mt-3 inline-flex rounded-lg bg-[#B42318] px-4 py-2 font-bold text-white">
@@ -72,7 +91,7 @@ export default function MeReportCard({ report, now, isMeToo = false }: Props) {
           Retake
         </button>
       )}
-      {held?.reason === "screening failed" && (
+      {held?.reason === SCREENING_FAILED_REASON && (
         <button
           type="button"
           disabled
