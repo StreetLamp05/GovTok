@@ -15,7 +15,7 @@ Chains `start-card` → implementation → `review-card` so a card can go from b
 The user is assumed to be away from the terminal. Any time you need their input, **send `PushNotification` first, then ask** — `AskUserQuestion` blocks silently, so without the ping the run just stalls unseen.
 
 - Message: one line, <200 chars, no markdown, lead with the card ID and what they need to decide. E.g. `US7 needs you: AC3 conflicts with spec §5.1.1 (autoplay vs tap-to-play) — pick one`.
-- Ping only for things that genuinely need the user: an ambiguous AC, a decision the spec doesn't cover, a Definition of Ready failure, an unmerged dependency, a failing build/test you can't resolve from the code, or a blocking review finding. Never ping for routine progress.
+- Ping only for things that genuinely need the user: an ambiguous AC, a decision the spec doesn't cover, a Definition of Ready failure, an unmerged dependency, a failing build/test you can't resolve from the code, or a review finding that needs their decision (step 4). Never ping for routine progress.
 - Phone delivery requires Remote Control to be connected; a "not sent" result just means it was redundant or had nowhere to go — carry on and ask anyway.
 - Subagents can't reach the user. Only this (main) session pings or asks.
 
@@ -48,11 +48,22 @@ Launch **one** `Agent` call, `subagent_type: general-purpose` (fresh, not `fork`
 
 Wait for the completion notification; don't poll and don't start reviewing in parallel yourself.
 
-## 4. Report
+## 4. Fix what needs no decision
 
-Relay the review agent's report to the user (it isn't shown to them automatically) — the AC checklist and findings, not a paraphrase that drops the evidence.
+Sort every finding in the report, blocking or not, into one of two groups:
 
-- `NEEDS_INPUT`: ping (`<ID> review: <reason>`), present the report, and stop. Don't patch findings yourself — fixing is a separate step the user asks for (same rule as `review-card`).
-- `CLEAN`: ping once that it's ready for their manual commit (`<ID> done: all N ACs verified, review clean — ready to commit`), since the run can't finish without them either way. Add the review section to `tasks/<CardID>-todo.md`.
+- **Fix:** a defect with one obviously correct fix inside the card's scope. Examples: a reproduced bug, a missing error path, a stale-state race, misleading error text, a doc comment, or matching a sibling card's text to avoid a merge conflict. Nothing about the product, spec or AC changes.
+- **Decide:** anything that changes behavior the spec or AC defines, picks between reasonable options, widens scope, adds a prop or field another card will depend on, or would edit the spec. Also any finding that marks a spec inconsistency.
+
+Fix the **Fix** group in this session without pinging. Add a regression test for each bug where one is practical, and re-run step 2's verification. Record each fix under a "Review fixes" heading in `tasks/<CardID>-todo.md`. If you fixed anything blocking, run step 3 again (a fresh review agent). Allow at most 2 fix rounds; if a blocking finding survives, treat it as **Decide**.
+
+When unsure which group a finding belongs to, it's **Decide**.
+
+## 5. Report
+
+Relay the final review agent's report to the user (it isn't shown to them automatically), meaning the AC checklist and findings, not a paraphrase that drops the evidence. Then list what you fixed in step 4 and what's left for them to decide.
+
+- **Something still blocks, or a Decide item is open:** ping (`<ID> review: <reason>`), present the report and the Decide list, and stop. Don't act on Decide items yourself.
+- `CLEAN`, or only fixed findings and non-blocking Decide items remain: ping once that it's ready for their manual commit (`<ID> done: all N ACs verified, review clean — ready to commit`), since the run can't finish without them either way. List any non-blocking Decide items in the message. Add the review section to `tasks/<CardID>-todo.md`.
 
 Never declare the card ready for Todo or touch board status — that's a human call.
