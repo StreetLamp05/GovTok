@@ -5,13 +5,13 @@ import { ConvexError } from "convex/values";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CameraCapture from "@/components/capture/CameraCapture";
-import type { RecordedClip } from "@/lib/hooks/useClipRecorder";
 import NearbyCheck from "@/components/post/NearbyCheck";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_CLIP_BYTES } from "@/convex/lib/clipLimit";
 import { CLIP_TOO_BIG, MAX_DESCRIPTION_LENGTH } from "@/convex/lib/postLimits";
 import type { LatLng } from "@/lib/demo";
+import type { RecordedClip } from "@/lib/hooks/useClipRecorder";
 import { useCurrentLocation, type LocationState } from "@/lib/hooks/useCurrentLocation";
 import { getResidentToken, useResidentToken } from "@/lib/hooks/useResidentToken";
 import { uploadFile } from "@/lib/upload";
@@ -28,7 +28,8 @@ type Mode = Draft["kind"];
 
 const SUBMIT_ERROR = "We couldn't send your post. Check your connection and try again.";
 const HINTS = {
-  video: "Film the problem for up to 20 seconds. Say what's wrong if you like.",
+  // An uploaded clip is pinned to the phone's location now too, not where it was filmed (§4.1.1).
+  video: "Film the problem for up to 20 seconds. Say what's wrong if you like. An upload is pinned to where you are now.",
   // Re-encoding strips each photo's GPS, so the pin is the phone's location now (§4.1.1).
   photos: "Up to 10 photos. Your post is pinned to where you are now, so post from where the problem is.",
 };
@@ -106,7 +107,8 @@ export default function PostFlow() {
 
   async function submit() {
     if (!draft || submitting || !point) return;
-    // Checked before uploading, so an oversized camera-app file fails fast instead of after a long upload.
+    // Uploads over 25 MB are converted first (convertClip), so this is a backstop: it fails fast
+    // instead of after a long upload.
     if (draft.kind === "video" && draft.clip.blob.size > MAX_CLIP_BYTES) {
       setError(CLIP_TOO_BIG);
       return;
@@ -239,7 +241,8 @@ export default function PostFlow() {
   );
 }
 
-// Reports are pinned to where they were filmed, so posting waits for a location (§7.1.1).
+// Reports are pinned to the phone's location when posting (where a live clip is filmed; an
+// upload or slideshow may differ, §4.1.1), so posting waits for a location (§7.1.1).
 function LocationGate({ location }: { location: LocationState & { refresh: () => void } }) {
   return (
     <main className="flex flex-col gap-4 p-6">

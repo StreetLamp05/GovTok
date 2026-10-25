@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { statusText } from "@/components/feed/CardOverlay";
-import { Retake, ScreeningFailed } from "@/components/post/CheckingScreen";
+import { HoldDebug, Retake, ScreeningFailed } from "@/components/post/CheckingScreen";
 import RevealPlayer from "@/components/RevealPlayer";
 import type { OwnerReport, PublicReport } from "@/convex/lib/publicReport";
 import { SCREENING_FAILED_REASON } from "@/convex/lib/screening";
@@ -48,6 +48,12 @@ export default function MeReportCard({ report, now, token = null, isMeToo = fals
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {/* §6.1.1: backdated samples must be labeled everywhere they show, including the demo phone's own. */}
+          {report.isSample && (
+            <span className="mb-1 inline-block rounded-md bg-[#F1F3F5] px-2 py-[3px] text-[11px] font-bold tracking-[.02em] text-[#364152]">
+              Sample · filmed in California
+            </span>
+          )}
           <h2 className="truncate font-bold text-[#17212B]">{report.title ?? "Your report"}</h2>
           {report.street && <p className="mt-1 truncate text-sm text-[#46505C]">{report.street}</p>}
         </div>
@@ -81,6 +87,8 @@ export default function MeReportCard({ report, now, token = null, isMeToo = fals
       {held && reason && held.verdict !== "retake" && reason !== SCREENING_FAILED_REASON && (
         <p className="mt-2 text-sm text-[#46505C]">{reason}</p>
       )}
+      {/* Retake and ScreeningFailed render their own debug line (§4.2.1, through Oct 30). */}
+      {held && (held.verdict === "reject" || held.verdict === "emergency") && <HoldDebug report={held} />}
       {held?.verdict === "emergency" && (
         <a href="tel:911" className="mt-3 inline-flex rounded-lg bg-[#B42318] px-4 py-2 font-bold text-white">
           Call 911

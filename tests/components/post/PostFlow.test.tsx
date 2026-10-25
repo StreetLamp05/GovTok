@@ -115,6 +115,8 @@ describe("PostFlow", () => {
     render(<PostFlow />);
     expect(cameraProps.at(-1)).toMatchObject({ modes: ["video", "photos"], initialMode: "video" });
     expect(cameraProps.at(-1)!.hints?.video).toMatch(/up to 20 seconds/);
+    // An uploaded clip is pinned to where the phone is now, like a slideshow.
+    expect(cameraProps.at(-1)!.hints?.video).toMatch(/An upload is pinned to where you are now/);
   });
 
   test("✕ on the camera goes back to the feed", () => {
@@ -198,10 +200,11 @@ describe("PostFlow", () => {
         isMine: false,
       },
     ];
-    state.myReport = { _id: "posted-report", status: "open", title: "Pothole", agency: "Cobb DOT" };
+    state.myReport = { status: "open", title: "Pothole", agency: "Cobb DOT" };
     render(<PostFlow />);
     fireEvent.click(screen.getByRole("button", { name: "No, it's new" }));
     await recordAndSubmit();
+    // US14's result screen ("Your post is live" was US8's interim one).
     expect(screen.getByRole("heading", { name: "Posted" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Post another" }));
     expect(screen.getByRole("heading", { name: "Is it one of these?" })).toBeTruthy();

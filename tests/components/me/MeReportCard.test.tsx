@@ -113,6 +113,27 @@ test("renders held status reasons and an emergency call link", () => {
   expect(screen.getByRole("link", { name: "Call 911" }).getAttribute("href")).toBe("tel:911");
 });
 
+test("every held card shows the raw verdict and reason (§4.2.1)", () => {
+  const { rerender } = render(
+    <MeReportCard report={report({ status: "held", verdict: "reject", reason: "Not a public-space problem" })} now={NOW} />,
+  );
+  expect(screen.getByTestId("hold-debug").textContent).toBe("held: reject · Not a public-space problem");
+
+  rerender(<MeReportCard report={report({ status: "held", verdict: "emergency", reason: "Fire" })} now={NOW} />);
+  expect(screen.getByTestId("hold-debug").textContent).toBe("held: emergency · Fire");
+
+  rerender(<MeReportCard report={report({ status: "open" })} now={NOW} />);
+  expect(screen.queryByTestId("hold-debug")).toBeNull();
+});
+
+test("a sample report carries the Sample badge (§6.1.1)", () => {
+  const { rerender } = render(<MeReportCard report={report({ status: "fixed", fixedAt: NOW, isSample: true })} now={NOW} />);
+  expect(screen.getByText("Sample · filmed in California")).toBeTruthy();
+
+  rerender(<MeReportCard report={report({ status: "fixed", fixedAt: NOW })} now={NOW} />);
+  expect(screen.queryByText("Sample · filmed in California")).toBeNull();
+});
+
 test("the Me page retake flow records replacement media and calls retakeReport", async () => {
   const retakeReport = vi.fn().mockResolvedValue(undefined);
   state.mutations["retake:retakeReport"] = retakeReport;

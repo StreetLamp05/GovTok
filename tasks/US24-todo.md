@@ -60,4 +60,10 @@ Spec: §5.4.1 (private Me page), §7.1.1 (resident privacy and muted-report proj
 
 ## Review follow-up
 - Added the capped-screening-failure **Post another** action to My posts; it routes to `/post`. The component test verifies the exhausted state hides Try again and invokes the new-post callback.
-- The review also noted the full US14 implementation exceeds US24's original file-ownership boundary; the user explicitly chose to keep US14 bundled with US24.
+- ~~The review also noted the full US14 implementation exceeds US24's original file-ownership boundary; the user explicitly chose to keep US14 bundled with US24.~~ Moot: US14 landed on main (#64), so the PR is now just US24.
+
+## Second review (2026-10-25)
+- `components/post/PostFlow.tsx` and its test reset to `origin/main`: main's `8bf96e1` made the same import fix, and keeping this branch's side caused a merge conflict.
+- My-posts cards show the Sample badge (§6.1.1), so the demo phone's backdated fallback sample is labeled on the Me page too.
+- Reject and emergency cards render `HoldDebug`, like retake and screening-failed already did through the shared components (§4.2.1).
+- Me-page reveals are not counted. This is recorded in §6.2.1.
