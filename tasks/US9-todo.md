@@ -36,14 +36,14 @@ Review verdict was CLEAN (3/3 ACs, nothing blocking).
 
 ## Review: CLEAN
 All 3 ACs verified with proof. No blocking findings. Left for the user (non-blocking):
-- Gallery photos are pinned to where the phone is at posting time, not where they were taken (the photo's own GPS is stripped). A photo from last week posted from home is pinned to home (§7.1.1 public location, §4.1.2 50 m check, §4.3.1 geofence). A spec decision: a hint, compare photo GPS before stripping, or accept it
+- Historical note: gallery photos' EXIF GPS is stripped. US30 supersedes the earlier phone-only pin decision: posts use the confirmed location, defaulting to GPS but allowing a manually placed map pin.
 - §1.1.3 cost estimate assumes 6 frames; 10 photos is about 16k input tokens per post (about 26k for a fix check against a 10-photo original)
 - HEIC can't be decoded on Android/desktop Chrome ("couldn't read" error); iOS Safari is fine
 - UX: Video is the default (camera prompt first); one unreadable photo fails the whole pick; switching to Video and back clears the photo pick
 - `photoToJpeg` repeats about 10 lines of canvas→JPEG from `grabFrame` (left US7's file alone)
 
 ## Decisions (user, 2026-10-25)
-- [x] **Photo pin:** Photos mode says "Your post is pinned to where you are now, so post from where the problem is." Dated notes in §4.1.1 and §7.1.1. No EXIF-GPS comparison, since iOS Safari often removes GPS from library picks
+- [x] **Photo pin:** Photo GPS is not trusted; the report uses the selected post location (GPS default, with manual pin available under US30). No EXIF-GPS comparison, since iOS Safari often removes GPS from library picks.
 - [x] **HEIC:** not decoded where the browser can't; the message names it ("This browser can't open HEIC photos. Try JPEGs."). `isHeic` checks the type, or the `.heic`/`.heif` name when the type is missing
 - [x] **Unreadable photos are skipped:** the readable ones are kept with "N photo(s) couldn't be read and was/were left out." (plus the HEIC hint when one was HEIC). Only if none can be read is it an error. The 10-photo cut happens first, so a skipped photo isn't replaced by the 11th
 - [x] **Pick kept across Video ↔ Photos:** the picker stays mounted (hidden) while Video shows; the recorder still unmounts, so the camera turns off

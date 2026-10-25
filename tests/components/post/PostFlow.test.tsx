@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as testingRender, screen } from "@testing-library/react";
 import { ConvexError } from "convex/values";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { CaptureMode } from "../../../components/capture/CameraCapture";
 import type { RecordedClip } from "../../../lib/hooks/useClipRecorder";
+import { DEMO_POINT } from "../../../lib/demo";
 import PostFlow from "../../../components/post/PostFlow";
 import type { LocationState } from "../../../lib/hooks/useCurrentLocation";
 
@@ -69,6 +71,22 @@ vi.mock("../../../components/capture/CameraCapture", () => ({
   },
 }));
 
+const MANUAL_POINT = { lat: 37.78, lng: -122.42 };
+type LocationPickerProps = {
+  initialPoint: { lat: number; lng: number };
+  onConfirm: (point: { lat: number; lng: number }) => void;
+  onCancel: () => void;
+};
+vi.mock("../../../components/map/LocationPicker", () => ({
+  default: (props: LocationPickerProps) => (
+    <div>
+      <p data-testid="picker-center">{`${props.initialPoint.lat},${props.initialPoint.lng}`}</p>
+      <button onClick={() => props.onConfirm(MANUAL_POINT)}>select test pin</button>
+      <button onClick={props.onCancel}>cancel map picker</button>
+    </div>
+  ),
+}));
+
 const PHOTOS = Array.from({ length: 3 }, (_, i) => new Blob([`photo ${i}`], { type: "image/jpeg" }));
 
 const CLIP: RecordedClip = {
@@ -93,6 +111,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+function render(ui: ReactElement) {
+  const view = testingRender(ui);
+  if (ui.type === PostFlow && state.location.status === "ready") {
+    fireEvent.click(screen.getByRole("button", { name: "Use this location" }));
+  }
+  return view;
+}
+
 async function recordAndSubmit(description?: string) {
   fireEvent.click(screen.getByText("fake record"));
   if (description !== undefined) {
@@ -102,21 +128,66 @@ async function recordAndSubmit(description?: string) {
 }
 
 describe("PostFlow", () => {
-  test("waits for a location before showing the recorder, and offers Try again when it's denied", () => {
+  test("GPS denial offers map selection and a retry without opening capture", () => {
     state.location = { status: "denied" };
     render(<PostFlow />);
     expect(screen.queryByText("fake record")).toBeNull();
-    expect(screen.getByRole("alert").textContent).toMatch(/Location is turned off/);
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.getByRole("status").textContent).toMatch(/permission denied/);
+    expect(screen.getByRole("button", { name: "Choose location on map" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try GPS again" }));
     expect(state.refresh).toHaveBeenCalled();
+  });
+
+  test("a manual pin works without GPS and drives nearby lookup and report submission", async () => {
+    state.location = { status: "denied" };
+    const view = testingRender(<PostFlow />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose location on map" }));
+    expect(screen.getByTestId("picker-center").textContent).toBe("37.7793,-122.4193");
+    fireEvent.click(screen.getByRole("button", { name: "select test pin" }));
+
+    expect(state.nearbyArgs.at(-1)).toEqual({
+      lat: MANUAL_POINT.lat,
+      lng: MANUAL_POINT.lng,
+      token: "token-a",
+    });
+    expect(screen.getByText("fake record")).toBeTruthy();
+    fireEvent.click(screen.getByText("fake record"));
+    expect(state.refresh).not.toHaveBeenCalled();
+    state.location = { status: "ready", point: { lat: 33.7, lng: -84.4 }, accuracy: 3, simulated: false };
+    view.rerender(<PostFlow />);
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+
+    expect(state.createReport.mock.calls[0][0]).toMatchObject({
+      lat: MANUAL_POINT.lat,
+      lng: MANUAL_POINT.lng,
+    });
+  });
+
+  test("the simulated demo point remains the default location", () => {
+    state.location = { status: "ready", point: DEMO_POINT, accuracy: null, simulated: true };
+    render(<PostFlow />);
+    expect(state.nearbyArgs.at(-1)).toEqual({
+      lat: DEMO_POINT.lat,
+      lng: DEMO_POINT.lng,
+      token: "token-a",
+    });
+  });
+
+  test("canceling the map picker returns to the current location choice", () => {
+    testingRender(<PostFlow />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose location on map" }));
+    fireEvent.click(screen.getByRole("button", { name: "cancel map picker" }));
+    expect(screen.getByRole("button", { name: "Use this location" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Use this location" }));
+    expect(screen.getByText("fake record")).toBeTruthy();
   });
 
   test("opens the full-screen camera with Video first and Photo second", () => {
     render(<PostFlow />);
     expect(cameraProps.at(-1)).toMatchObject({ modes: ["video", "photos"], initialMode: "video" });
     expect(cameraProps.at(-1)!.hints?.video).toMatch(/up to 20 seconds/);
-    // An uploaded clip is pinned to where the phone is now, like a slideshow.
-    expect(cameraProps.at(-1)!.hints?.video).toMatch(/An upload is pinned to where you are now/);
+    expect(cameraProps.at(-1)!.hints?.video).toMatch(/choose a pin first/);
   });
 
   test("✕ on the camera goes back to the feed", () => {
@@ -249,10 +320,9 @@ describe("PostFlow", () => {
     expect(state.createReport.mock.calls[0][0].description).toBeUndefined();
   });
 
-  test("keeps the fix from filming when the refresh after recording fails", async () => {
+  test("keeps the confirmed location if GPS becomes unavailable after recording", async () => {
     const view = render(<PostFlow />);
     fireEvent.click(screen.getByText("fake record"));
-    expect(state.refresh).toHaveBeenCalledTimes(1);
     state.location = { status: "timeout" };
     view.rerender(<PostFlow />);
 
@@ -262,13 +332,13 @@ describe("PostFlow", () => {
     expect(state.createReport.mock.calls[0][0]).toMatchObject({ lat: 33.8158, lng: -84.5825 });
   });
 
-  test("uses the newer fix when the refresh succeeds", async () => {
+  test("keeps the confirmed location when a later GPS refresh finds a newer fix", async () => {
     const view = render(<PostFlow />);
     fireEvent.click(screen.getByText("fake record"));
     state.location = { status: "ready", point: { lat: 33.8161, lng: -84.5829 }, accuracy: 4, simulated: false };
     view.rerender(<PostFlow />);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
-    expect(state.createReport.mock.calls[0][0]).toMatchObject({ lat: 33.8161, lng: -84.5829 });
+    expect(state.createReport.mock.calls[0][0]).toMatchObject({ lat: 33.8158, lng: -84.5825 });
   });
 
   test("a clip over 25 MB is refused before anything uploads", async () => {
@@ -350,9 +420,9 @@ describe("Photos", () => {
     URL.createObjectURL = vi.fn(() => `blob:preview-${++n}`);
   });
 
-  test("Photo mode says the post is pinned to where you are now", () => {
+  test("Photo mode explains that the current location is the default pin", () => {
     render(<PostFlow />);
-    expect(cameraProps.at(-1)!.hints?.photos).toMatch(/pinned to where you are now, so post from where the problem is/);
+    expect(cameraProps.at(-1)!.hints?.photos).toMatch(/current location unless you choose a pin first/);
   });
 
   test("the preview shows every photo and has the description box", () => {
@@ -384,8 +454,24 @@ describe("Photos", () => {
       lat: 33.8158,
       lng: -84.5825,
     });
+
     expect(args).not.toHaveProperty("clipStorageId");
     expect(screen.getByRole("heading").textContent).toBe("Checking…");
+  });
+
+  test("a manual pin is also used when submitting a photo post without GPS", async () => {
+    state.location = { status: "unavailable" };
+    testingRender(<PostFlow />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose location on map" }));
+    fireEvent.click(screen.getByRole("button", { name: "select test pin" }));
+    fireEvent.click(screen.getByText("fake pick"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+
+    expect(state.createReport.mock.calls[0][0]).toMatchObject({
+      mediaType: "photos",
+      lat: MANUAL_POINT.lat,
+      lng: MANUAL_POINT.lng,
+    });
   });
 
   test("Pick again drops the photos and goes back to the picker, keeping the description", () => {

@@ -89,7 +89,7 @@ Third review verdict was CLEAN (15/15 ACs, 44/44 mutations caught, nothing block
 - [x] A2 two quick snaps at 9 photos made 11: the photo list ref now changes in step with every add/remove (test fails against the old code)
 - [x] A4 conversion is cancelled (AbortSignal) when the camera closes or another file is picked (browser test: abort → AbortError; component test: unmount aborts)
 - [x] A5/B6 `PhotoPicker` was dead (nothing, US25 included, imports it): removed with its test; its photo rules are covered by new `tests/lib/media/preparePhotos.test.ts`
-- [x] B2 the Video hint says an upload is pinned to where you are now; §7.1.1 and §4.1.1 say so too; LocationGate comment fixed
+- [x] B2 the Video hint explains location behavior: GPS is the default unless a map pin is chosen (§4.1.1, US30).
 - [x] B3 the camera shows the "Demo mode: location simulated" banner (test)
 - [x] B4/B7 spec: fix flow and admin intake convert too; §8 .mov note; stale comments ("720p or less", "fails fast", PhotoPicker) fixed. (Task-file note: the shared photo code is `lib/media/preparePhotos.ts`)
 - [x] B5 Photo mode doesn't need the microphone: after a failed open, switching to Photo reopens without audio; a silent camera reopens with sound for Video (tests)

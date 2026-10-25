@@ -53,7 +53,7 @@ Updated incrementally as decisions are locked in.
   - The city can require proof-of-fix only from its own staff and contractors. Cobb County and utility crews are outside its control.
   - Team: 2. Budget: free tiers and hackathon credits.
 - **v1 =** a resident films a problem, and it shows up in the feed and on the map with who's responsible. Neighbors can "me too" it. When it's fixed, the proof-of-fix video appears on the same card.
-  - **Post:** record a short video (or photos) in the browser with the rear camera. Location comes from the phone.
+  - **Post:** record a short video (or photos) in the browser with the rear camera. Location defaults to the phone but can be selected on a map.
   - **Feed:** vertical full-screen scroll. Each card shows the problem, who's responsible (city / Cobb / utility), status, and days open. Resolved cards show the fix after the original.
   - **Me too:** one tap adds you to an existing problem instead of creating a duplicate.
   - **Map:** report and "me too" counts clustered by location.
@@ -72,6 +72,7 @@ Updated incrementally as decisions are locked in.
 - ~~**2026-10-24: video only.**~~ *Retconned the same day, see below.* Removed "(or photos)" from Post and "or photos" from Proof to close.
 - **2026-10-24 (retcon): posts are a video OR a photo slideshow; fixes stay video only.** The user wants TikTok photo mode for residents who prefer it. A slideshow is 1–10 photos swiped sideways. Proof of fix stays video only, because the walk-around is the trust anchor (§4.3.1). (§4.1.1)
 - **2026-10-24: optional text description on posts** (up to 280 characters), so residents can explain in text if they want. (§4.1.1, §4.2.1)
+- **2026-10-25: manual post location.** GPS remains the default, but a resident can choose a map pin instead, including when location permission is unavailable. The selected pin drives both the nearby-report check and the submitted report; it is a user-provided location, not a verified GPS claim. (§4.1.1, §4.1.2, §7.1.1)
 - **2026-10-24: private "Me" page.** The non-goal "public profiles" still holds. A private page tied to the device token shows your own posts and their results, plus fixes on things you reported or me-too'd. It's important for the demo, because it closes the loop. (§5.4.1)
 - **2026-10-24: tax framing.** Mableton residents are frustrated right now because the city just added a property tax. GovTok lets them **see their tax dollars at work**: every verified fix is visible proof of where the money goes. Use this as a pitch angle, especially on Oct 30. *(Get the date and millage figure before it goes in the pitch.)* (§6.2.1)
 - **2026-10-24: clips keep audio**, which gets transcribed (§1.1.3, §1.1.4). Proof-of-fix commentary is still out of scope (§4.3.1).
@@ -254,14 +255,15 @@ Updated incrementally as decisions are locked in.
 - **Frames from a file** (sweep, 2026-10-24): for any clip not recorded live, load the blob into a hidden `<video>`, seek to 6 evenly spaced times, and grab each frame with a canvas. Used by the native-camera fallback and by demo-mode uploads (§6.1.1).
 - ~~**Video only**, for both posts and fixes.~~
 - **Retcon (2026-10-24):** a post is a **video or a photo slideshow** of 1–10 photos, picked from the camera or gallery (`<input type="file" accept="image/*" multiple>`) and resized in the browser to 1280px or less on the long edge. **Fixes stay video only** (§4.3.1). Reason: the user wants TikTok photo mode as an option.
-  - (2026-10-25) Photos are pinned to where the phone is when posting, not where they were taken: re-encoding strips their EXIF GPS (and iOS Safari often removes it from library picks anyway). Photos mode says "Your post is pinned to where you are now, so post from where the problem is."
+  - (2026-10-25) Photo EXIF GPS is stripped during re-encoding (and iOS Safari often removes it from library picks anyway). The report uses the selected post location, which defaults to the phone but can be set on a map.
   - (2026-10-25) A photo the browser can't read is left out of the pick, with a note, instead of failing the whole pick. HEIC isn't decoded where the browser can't (Android and desktop Chrome); the message names the format. iOS Safari reads HEIC.
 - **Capture screen and uploads** (2026-10-25, US14, user request):
   - Posts use a full-screen camera laid out like TikTok's: a ✕ top-left, a round shutter, VIDEO · PHOTO tabs under it, and Upload bottom-left. Video records the 20 s clip above. Photo snaps stills from the same live camera (1280 px or less, no EXIF), up to 10, with a strip to remove any, then Next. Upload adds photos from the library, up to 10 in all. A retake opens the same camera in the post's format only (§4.2.1). Fixes keep the plain recorder (§4.3.1).
   - Upload in Video mode is **always available, not only in demo mode** (better for testing and the demo). A clip that isn't MP4/WebM (a new iPhone's `.mov`, often HEVC or 4K) or is over 25 MB is converted in the browser: played in a hidden `<video>`, drawn to a canvas at 1280 px or less on the long edge, and re-recorded with the same MediaRecorder settings as a live clip, audio included, cut at 20 s. It runs in real time, so a 20 s clip takes about 20 s ("Converting your video… 45%"). An MP4 or WebM under 25 MB passes through as it is, unless it runs over 20.5 s: then it's converted too, which cuts it to 20 s, so the 20 s cap and Claude's frame spacing hold for uploads (user decision, 2026-10-25). The length is read after the tap, so on iOS such a clip may convert without sound.
   - The conversion runs wherever a clip comes from a file, not just on posts: the fix flow's camera-app fallback and demo upload, `/admin/video-intake` ("Converting your clip… N%" there) and `/admin/seed`. A fix `.mov` used to pass through, since fixes aren't transcribed; converting it also makes the reveal play on Android. Fix clips convert without sound, so a converted fix clip is silent where it's stored (§4.3.1).
   - If the browser won't start the audio (iOS can stop counting the tap once the library picker closes), the clip is converted without sound rather than not at all, and an empty result is an error. Closing the camera cancels a conversion in progress.
-  - An uploaded clip, like a slideshow, is pinned to where the phone is when posting, and the Video hint says so ("An upload is pinned to where you are now").
+  - An uploaded clip, like a slideshow, is pinned to the selected post location, which defaults to the phone.
+  - **Location (2026-10-25):** GPS is the default pin. Before the nearby-report check, the resident can choose **Choose location on map**, tap to place a pin, and confirm it. The map starts at the current (or simulated demo) location when available, otherwise the active city's center. Manual selection works without GPS permission and overrides subsequent location refreshes; the same confirmed coordinates drive the 50 m nearby check (§4.1.2) and `createReport`. No address search or city boundary is required.
   - Photo mode doesn't use the microphone, so a denied mic still leaves the Photo shutter working; Video reopens the camera with sound.
   - In demo mode the full-screen camera repeats the "Demo mode: location simulated" banner (§6.1.1).
   - Rejected: ffmpeg in a Convex action (no binary, and it would download the whole clip) and ffmpeg.wasm (megabytes of download, and far slower than real time on a phone).
@@ -272,13 +274,13 @@ Updated incrementally as decisions are locked in.
 - Context: a production GovTok would be a native mobile app with native capture. It's mobile web for now, because no Apple developer account is available (Scope non-goal). 📌 Deferred (§8).
 
 **4.1.2 Duplicate check — location-only check before recording, 50 m**
-- When the resident taps Post, the app reads their GPS location and queries `open` reports within about 50 m (bounding box, §1.1.1).
+- When the resident confirms their location (GPS by default or a manually selected map pin, §4.1.1), the app queries `open` reports within about 50 m (bounding box, §1.1.1).
 - If there are matches, it shows "Is it one of these?" with up to 3 nearest cards (thumbnail, title, days open), each with a **Me too** button, plus "No, it's new," which opens the camera.
 - If nothing is nearby, it goes straight to the camera (§4.1.1).
 - Me too creates a `meToos` row (§2.1.1). No clip is recorded.
 - Build-plan defaults (2026-10-24): Me too on your own post does nothing, and the button is hidden on your own posts and on fixed cards.
 - No automatic merge after screening: a later post at the same spot with the same category stays a separate report.
-- Rationale: location is known before recording, while category is known only after Claude runs. Checking up front means no clip gets recorded and thrown away, and it's a demo beat ("the app already knows about this pothole"). Phone GPS is usually 5–20 m accurate, so 50 m catches the same spot but not the next block.
+- Rationale: location is known before recording, while category is known only after Claude runs. Checking up front means no clip gets recorded and thrown away, and it's a demo beat ("the app already knows about this pothole"). A manually selected pin is trusted the same as GPS for this check; the reporter is responsible for choosing the problem's location.
 - Rejected:
   - Matching on category after screening: the clip is already recorded, and an automatic merge can join two different problems.
   - Both checks: two flows for a 45s demo.
@@ -420,7 +422,7 @@ Updated incrementally as decisions are locked in.
 
 **6.1.1 California sample videos — Sample badge + demo location mode**
 - Seeded reports have `isSample: true`, are placed at plausible coordinates in the active city, and show a **"Sample · filmed in California"** badge on the card.
-- `?demo=<city id>` swaps the phone's GPS for a fixed point next to the seeds and shows a **"Demo mode: location simulated"** banner. Posting (§4.1.1), the duplicate check (§4.1.2) and the fix geofence (§4.3.1) all use that point.
+- `?demo=<city id>` swaps the phone's GPS for a fixed point next to the seeds and shows a **"Demo mode: location simulated"** banner. Posting defaults to that point, but a manually selected pin overrides it; the duplicate check (§4.1.2) and the fix geofence (§4.3.1) use their respective selected/current points.
 - **City profile** (2026-10-25, US25, user decision; supersedes the Mableton placement for Cal Hacks):
   - Everything runs in San Francisco, where the team and the samples are, and the demo is live at the Palace of Fine Arts.
   - `ACTIVE_CITY` (`convex/lib/city.ts`) is `SAN_FRANCISCO`. It sets the routing table (§2.1.2), "residents of San Francisco, California" in both Claude prompts, the map's default center (Civic Center) and title, and the seed presets (SF street corners).
@@ -482,7 +484,7 @@ Updated incrementally as decisions are locked in.
 ### 7.1 Privacy
 
 **7.1.1 What's public — exact location, no poster identity; held clips purged after 7 days**
-- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow or an uploaded clip is pinned to where the phone was when posting, which may not be where it was filmed (§4.1.1).
+- **Location:** exact lat/lng and street are public. Fixers need them, and the 50 m checks depend on them (§4.1.2, §4.3.1). A slideshow or an uploaded clip is pinned to the selected post location (§4.1.1), which defaults to the phone's location but may be manually chosen and is not independently verified.
 - **Never public:** no query returns the poster, the me-too list, resident tokens or fixer tokens. The one exception is the Me page (§5.4.1): a query keyed by your own token returns only your own posts and me-toos. Only counts and the fixer's org (§3.1.2) are public.
 - **Muted reports:** for `audioMuted` reports (§4.2.1), queries never return the transcript or captions.
 - **Retention:**
@@ -547,8 +549,8 @@ Updated incrementally as decisions are locked in.
 - ~~3.1.2 Fixer access (who can close a report)~~ ✓ *(passcode per fixer)*
 
 **4.1 Posting**
-- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s; posts are a video or a photo slideshow, fixes video only)*
-- ~~4.1.2 Duplicate check when posting~~ ✓ *(location pre-check, 50 m)*
+- ~~4.1.1 Capture (in-page recorder vs native camera, length, resolution)~~ ✓ *(in-page recorder, 720p, 20s; posts are a video or a photo slideshow; GPS-default or manual map pin; fixes video only)*
+- ~~4.1.2 Duplicate check when posting~~ ✓ *(selected-location pre-check, 50 m)*
 
 **4.2 Screening**
 - ~~4.2.1 What Claude checks, and what happens when something is flagged (incl. emergencies)~~ ✓ *(verdict → automatic action)*
@@ -591,4 +593,3 @@ Updated incrementally as decisions are locked in.
 7. **Before ship:** verify the routing table (§8), and source the Mamdani claim and the tax figures before they go in the pitch (Scope).
 
 **Partner handoff (wireframes in Claude Cowork):** read Scope, Scope addendum, §4.1 (capture: video / slideshow / description / duplicate check), §4.2.1 (Checking… and verdict screens, incl. Call 911), §5.1–§5.4, §6.1.1 (Sample badge, demo banner). §5 entries are directional: content and behavior are fixed, layout is the partner's call.
-
