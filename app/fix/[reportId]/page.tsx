@@ -4,9 +4,10 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { daysLabel, daysOpen, OwnerChip } from "@/components/fix/FixerList";
+import { OwnerChip } from "@/components/fix/FixerList";
 import { api } from "@/convex/_generated/api";
 import type { PublicReport } from "@/convex/lib/publicReport";
+import { daysLabel, daysOpen } from "@/lib/days";
 import { useSoundUnlocked } from "@/lib/hooks/sound";
 import { useFixerToken } from "@/lib/hooks/useFixerToken";
 
