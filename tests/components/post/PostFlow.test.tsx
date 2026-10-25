@@ -11,6 +11,9 @@ const state = vi.hoisted(() => ({
   location: { status: "ready", point: { lat: 33.8158, lng: -84.5825 }, accuracy: 8, simulated: false } as LocationState,
   refresh: vi.fn(),
   createReport: vi.fn(),
+  push: vi.fn(),
+  nearbyReports: [] as unknown,
+  nearbyArgs: [] as unknown[],
   myReport: undefined as unknown,
   myReportArgs: [] as unknown[],
   uploads: [] as Blob[],
@@ -19,10 +22,16 @@ const state = vi.hoisted(() => ({
 vi.mock("convex/react", () => ({
   useMutation: () => state.createReport,
   useQuery: (_ref: unknown, args: unknown) => {
-    state.myReportArgs.push(args);
-    return args === "skip" ? undefined : state.myReport;
+    if (args === "skip") return undefined;
+    if (args && typeof args === "object" && "reportId" in args) {
+      state.myReportArgs.push(args);
+      return state.myReport;
+    }
+    state.nearbyArgs.push(args);
+    return state.nearbyReports;
   },
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push }) }));
 vi.mock("../../../lib/hooks/useCurrentLocation", () => ({
   useCurrentLocation: () => ({ ...state.location, refresh: state.refresh }),
 }));
@@ -74,6 +83,8 @@ beforeEach(() => {
   state.location = { status: "ready", point: { lat: 33.8158, lng: -84.5825 }, accuracy: 8, simulated: false };
   state.refresh.mockReset();
   state.createReport.mockReset().mockResolvedValue("report-1");
+  state.nearbyReports = [];
+  state.nearbyArgs = [];
   state.myReport = undefined;
   state.myReportArgs = [];
   state.uploads = [];
@@ -102,6 +113,90 @@ describe("PostFlow", () => {
   test("records with audio, opening the camera without a tap", () => {
     render(<PostFlow />);
     expect(recorderProps.at(-1)).toMatchObject({ audio: true, autoOpen: true });
+  });
+
+  test("waits for nearby results before opening the camera, then goes straight to capture when none match", () => {
+    state.nearbyReports = undefined;
+    const view = render(<PostFlow />);
+    expect(screen.queryByText("fake record")).toBeNull();
+    expect(screen.getByText("Checking for nearby reports…")).toBeTruthy();
+    expect(state.nearbyArgs.at(-1)).toEqual({
+      lat: 33.8158,
+      lng: -84.5825,
+      token: "token-a",
+    });
+
+    state.nearbyReports = [];
+    view.rerender(<PostFlow />);
+    expect(screen.getByText("fake record")).toBeTruthy();
+  });
+
+  test("shows nearby choices before camera capture and proceeds when none is selected", () => {
+    state.nearbyReports = [
+      {
+        report: {
+          _id: "nearby-report",
+          _creationTime: 1,
+          mediaType: "video",
+          lat: 33.8159,
+          lng: -84.5825,
+          title: "Pothole on Main",
+          street: "Main St",
+          status: "open",
+          audioMuted: false,
+          isSample: false,
+          meTooCount: 2,
+          lastActivityAt: 1,
+          revealViews: 0,
+          createdAt: 1,
+          clipUrl: null,
+          frameUrls: [],
+          fixUrl: null,
+        },
+        distanceMeters: 12,
+        isMine: false,
+      },
+    ];
+    render(<PostFlow />);
+    expect(screen.getByRole("heading", { name: "Is it one of these?" })).toBeTruthy();
+    expect(screen.getByText("Pothole on Main")).toBeTruthy();
+    expect(screen.queryByText("fake record")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "No, it's new" }));
+    expect(screen.getByText("fake record")).toBeTruthy();
+  });
+
+  test("rechecks nearby reports after choosing to post another", async () => {
+    state.nearbyReports = [
+      {
+        report: {
+          _id: "nearby-report",
+          _creationTime: 1,
+          mediaType: "video",
+          lat: 33.8159,
+          lng: -84.5825,
+          title: "Pothole on Main",
+          status: "open",
+          audioMuted: false,
+          isSample: false,
+          meTooCount: 0,
+          lastActivityAt: 1,
+          revealViews: 0,
+          createdAt: 1,
+          clipUrl: null,
+          frameUrls: [],
+          fixUrl: null,
+        },
+        distanceMeters: 12,
+        isMine: false,
+      },
+    ];
+    state.myReport = { status: "open", title: "Pothole", agency: "Cobb DOT" };
+    render(<PostFlow />);
+    fireEvent.click(screen.getByRole("button", { name: "No, it's new" }));
+    await recordAndSubmit();
+    expect(screen.getByText("Your post is live")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Post another" }));
+    expect(screen.getByRole("heading", { name: "Is it one of these?" })).toBeTruthy();
   });
 
   test("the description has a live counter and stops at 280 characters", () => {

@@ -1,17 +1,18 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useEffect, useState } from "react";
 import PhotoPicker from "@/components/capture/PhotoPicker";
 import VideoRecorder, { type RecordedClip } from "@/components/capture/VideoRecorder";
+import NearbyCheck from "@/components/post/NearbyCheck";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_CLIP_BYTES } from "@/convex/lib/clipLimit";
 import { CLIP_TOO_BIG, MAX_DESCRIPTION_LENGTH } from "@/convex/lib/postLimits";
 import type { LatLng } from "@/lib/demo";
 import { useCurrentLocation, type LocationState } from "@/lib/hooks/useCurrentLocation";
-import { getResidentToken } from "@/lib/hooks/useResidentToken";
+import { getResidentToken, useResidentToken } from "@/lib/hooks/useResidentToken";
 import { uploadFile } from "@/lib/upload";
 import CheckingScreen from "./CheckingScreen";
 
@@ -28,13 +29,22 @@ const SUBMIT_ERROR = "We couldn't send your post. Check your connection and try 
 
 export default function PostFlow() {
   const location = useCurrentLocation();
+  const residentToken = useResidentToken();
   const createReport = useMutation(api.posts.createReport);
   const [mode, setMode] = useState<Mode>("video");
+  const nearbyReports = useQuery(
+    api.nearby.nearbyOpen,
+    location.status === "ready" && residentToken
+      ? { lat: location.point.lat, lng: location.point.lng, token: residentToken }
+      : "skip",
+  );
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [continueToCapture, setContinueToCapture] = useState(false);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportId, setReportId] = useState<Id<"reports"> | null>(null);
+  const [now] = useState(() => Date.now());
 
   // Revoke the preview URLs when the draft is replaced or the page unmounts.
   useEffect(() => {
@@ -56,6 +66,7 @@ export default function PostFlow() {
     recordAgain();
     setDescription("");
     setReportId(null);
+    setContinueToCapture(false);
   }
 
   function captured(clip: RecordedClip) {
@@ -119,7 +130,24 @@ export default function PostFlow() {
 
   if (!draft) {
     if (location.status !== "ready") return <LocationGate location={location} />;
-    // US10: the duplicate check ("Is it one of these?", §4.1.2) goes here, before the camera opens.
+    if (!residentToken || nearbyReports === undefined) {
+      return (
+        <main className="flex flex-col gap-4 p-6" aria-busy="true">
+          <h1 className="text-2xl font-extrabold">Post a problem</h1>
+          <p className="text-[#4A5A6E]">Checking for nearby reports…</p>
+        </main>
+      );
+    }
+    if (nearbyReports.length > 0 && !continueToCapture) {
+      return (
+        <NearbyCheck
+          reports={nearbyReports}
+          token={residentToken}
+          now={now}
+          onContinue={() => setContinueToCapture(true)}
+        />
+      );
+    }
     return (
       <main className="flex flex-col gap-4 p-6">
         <h1 className="text-2xl font-extrabold">Post a problem</h1>

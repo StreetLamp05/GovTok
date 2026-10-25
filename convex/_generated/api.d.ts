@@ -29,6 +29,8 @@ import type * as lib_screening from "../lib/screening.js";
 import type * as lib_transcribe from "../lib/transcribe.js";
 import type * as lib_videoIntakeValidation from "../lib/videoIntakeValidation.js";
 import type * as map from "../map.js";
+import type * as meToos from "../meToos.js";
+import type * as nearby from "../nearby.js";
 import type * as placeholder from "../placeholder.js";
 import type * as posts from "../posts.js";
 import type * as purge from "../purge.js";
@@ -68,6 +70,8 @@ declare const fullApi: ApiFromModules<{
   "lib/transcribe": typeof lib_transcribe;
   "lib/videoIntakeValidation": typeof lib_videoIntakeValidation;
   map: typeof map;
+  meToos: typeof meToos;
+  nearby: typeof nearby;
   placeholder: typeof placeholder;
   posts: typeof posts;
   purge: typeof purge;
